@@ -4,12 +4,17 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Log;
+use App\Services\PaymentService;
+
 
 class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
         Log::info('[STEP 2b] AppServiceProvider register() called');
+        $this->app->bind(PaymentService::class, function ($app) {
+            return new PaymentService();
+        });
     }
 
     public function boot(): void
