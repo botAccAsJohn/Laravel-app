@@ -373,3 +373,27 @@ response
 [2026-03-18 09:16:45] local.INFO: [STEP 4] Middleware handle() BEFORE controller {"url":"http://127.0.0.1:8000/greet/nothingifofdfdsff","method":"GET","ip":"127.0.0.1"} 
 [2026-03-18 09:16:45] local.INFO: [STEP 9-pre] Middleware handle() AFTER controller, returning
 response  
+[2026-03-18 12:54:54] local.INFO: [STEP 2b] AppServiceProvider register() called  
+[2026-03-18 12:54:55] local.INFO: [STEP 5] AppServiceProvider boot() called all services ready  
+[2026-03-18 13:55:06] [STEP 1] Entry point public/index.php reached
+[2026-03-18 12:55:07] local.INFO: [STEP 2b] AppServiceProvider register() called  
+[2026-03-18 12:55:07] local.INFO: [STEP 5] AppServiceProvider boot() called all services ready  
+[2026-03-18 12:55:07] local.INFO: [STEP 4] Middleware handle() BEFORE controller {"url":"http://127.0.0.1:8000","method":"GET","ip":"127.0.0.1"} 
+[2026-03-18 12:55:10] local.INFO: [STEP 9-pre] Middleware handle() AFTER controller, returning
+response  
+[2026-03-18 13:55:23] [STEP 1] Entry point public/index.php reached
+[2026-03-18 12:55:23] local.INFO: [STEP 2b] AppServiceProvider register() called  
+[2026-03-18 12:55:23] local.INFO: [STEP 5] AppServiceProvider boot() called all services ready  
+[2026-03-18 12:55:23] local.INFO: [STEP 4] Middleware handle() BEFORE controller {"url":"http://127.0.0.1:8000/test-facade","method":"GET","ip":"127.0.0.1"} 
+[2026-03-18 12:55:23] local.INFO: Process started  
+[2026-03-18 12:55:23] local.INFO: Process ended  
+[2026-03-18 12:55:23] local.INFO: [STEP 9-pre] Middleware handle() AFTER controller, returning
+response  
+[2026-03-18 13:55:45] [STEP 1] Entry point public/index.php reached
+[2026-03-18 12:55:45] local.INFO: [STEP 2b] AppServiceProvider register() called  
+[2026-03-18 12:55:45] local.INFO: [STEP 5] AppServiceProvider boot() called all services ready  
+[2026-03-18 12:55:45] local.INFO: [STEP 4] Middleware handle() BEFORE controller {"url":"http://127.0.0.1:8000/test-facade","method":"GET","ip":"127.0.0.1"} 
+[2026-03-18 12:55:45] local.INFO: Process started  
+[2026-03-18 12:55:45] local.INFO: Process ended  
+[2026-03-18 12:55:45] local.INFO: [STEP 9-pre] Middleware handle() AFTER controller, returning
+response  

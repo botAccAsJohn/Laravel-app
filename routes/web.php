@@ -6,6 +6,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\LifecycleController;
 use App\Http\Controllers\PaymentController;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 use App\Services\GreetingService;
 
 
@@ -55,3 +56,15 @@ Route::get('/', function () {
 
 Route::get('/users', CompanyController::class);
 Route::get('/discount/{price}', [ProductController::class, 'calculate']);
+
+Route::get('/test-facade', function () {
+    Log::info("Process started");
+    Cache::put('username_key', 'nothing', now()->addMinutes(1));
+
+    $cachedValue = Cache::get('username_key');
+
+    Log::info("Process ended");
+    return $responseData = [
+        'name_from_cache' => $cachedValue,
+    ];
+});
