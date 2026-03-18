@@ -1,0 +1,30 @@
+[2026-03-18 06:30:56] development.INFO: [STEP 2b] AppServiceProvider register() called  
+[2026-03-18 06:30:56] development.INFO: [STEP 5] AppServiceProvider boot() called all services ready  
+[2026-03-18 06:31:10] development.INFO: [STEP 2b] AppServiceProvider register() called  
+[2026-03-18 06:31:10] development.INFO: [STEP 5] AppServiceProvider boot() called all services ready  
+[2026-03-18 06:31:10] development.INFO: [STEP 4] Middleware handle() BEFORE controller {"url":"http://127.0.0.1:8000","method":"GET","ip":"127.0.0.1"} 
+[2026-03-18 06:31:13] development.INFO: [STEP 9-pre] Middleware handle() AFTER controller, returning
+response  
+[2026-03-18 06:31:28] development.INFO: [STEP 2b] AppServiceProvider register() called  
+[2026-03-18 06:31:28] development.INFO: [STEP 5] AppServiceProvider boot() called all services ready  
+[2026-03-18 06:31:28] development.INFO: [STEP 4] Middleware handle() BEFORE controller {"url":"http://127.0.0.1:8000/test-bind","method":"GET","ip":"127.0.0.1"} 
+[2026-03-18 06:31:28] development.INFO: LoggerService CREATED — instance ID: 296  
+[2026-03-18 06:31:28] development.INFO: LoggerService CREATED — instance ID: 295  
+[2026-03-18 06:31:28] development.INFO: bind() — logger1 ID: 296  
+[2026-03-18 06:31:28] development.INFO: bind() — logger2 ID: 295  
+[2026-03-18 06:31:28] development.INFO: bind() — Same instance? NO  
+[2026-03-18 06:31:28] development.INFO: [Instance 296] Hello from logger1  
+[2026-03-18 06:31:28] development.INFO: [Instance 295] Hello from logger2  
+[2026-03-18 06:31:28] development.INFO: [STEP 9-pre] Middleware handle() AFTER controller, returning
+response  
+[2026-03-18 06:38:33] development.INFO: [STEP 2b] AppServiceProvider register() called  
+[2026-03-18 06:38:33] development.INFO: [STEP 5] AppServiceProvider boot() called all services ready  
+[2026-03-18 06:38:33] development.INFO: [STEP 4] Middleware handle() BEFORE controller {"url":"http://127.0.0.1:8000/test-singleton","method":"GET","ip":"127.0.0.1"} 
+[2026-03-18 06:38:33] development.INFO: LoggerService CREATED — instance ID: 297  
+[2026-03-18 06:38:33] development.INFO: singleton() — logger1 ID: 297  
+[2026-03-18 06:38:33] development.INFO: singleton() — logger2 ID: 297  
+[2026-03-18 06:38:33] development.INFO: singleton() — Same instance? YES  
+[2026-03-18 06:38:33] development.INFO: [Instance 297] Hello from logger1  
+[2026-03-18 06:38:33] development.INFO: [Instance 297] Hello from logger2  
+[2026-03-18 06:38:33] development.INFO: [STEP 9-pre] Middleware handle() AFTER controller, returning
+response  

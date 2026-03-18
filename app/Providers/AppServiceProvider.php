@@ -5,6 +5,8 @@ namespace App\Providers;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Log;
 use App\Services\PaymentService;
+use App\Services\LoggerService;
+
 
 
 class AppServiceProvider extends ServiceProvider
@@ -14,6 +16,12 @@ class AppServiceProvider extends ServiceProvider
         Log::info('[STEP 2b] AppServiceProvider register() called');
         $this->app->bind(PaymentService::class, function ($app) {
             return new PaymentService();
+        });
+        $this->app->bind('logger.bind', function () {
+            return new LoggerService();
+        });
+        $this->app->singleton('logger.singleton', function () {
+            return new LoggerService();
         });
     }
 
