@@ -2,7 +2,8 @@
 define('LARAVEL_START', microtime(true));
 // [STEP 1] Log that we have entered the entry point
 file_put_contents(
-    __DIR__ . '/../storage/logs/laravel.log' . date("Y-m-d H:i:s") . '] [STEP 1] Entry point public/index.php reached [' . PHP_EOL,
+    __DIR__ . '/../storage/logs/laravel.log',
+    '[' . date("Y-m-d H:i:s") . '] [STEP 1] Entry point public/index.php reached' . PHP_EOL,
     FILE_APPEND
 );
 // Autoloader

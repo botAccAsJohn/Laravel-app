@@ -6,6 +6,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\LifecycleController;
 use App\Http\Controllers\PaymentController;
 use Illuminate\Support\Facades\Log;
+use App\Services\GreetingService;
 
 
 Route::get('/lifecycle', [LifecycleController::class, 'index'])
@@ -40,6 +41,10 @@ Route::get('/test-singleton', function () {
     $logger2->log("Hello from logger2");
 
     return "Check your logs!";
+});
+
+Route::get('/greet/{name}', function (GreetingService $greeting, string $name) {
+    return $greeting->greet($name);
 });
 
 Route::get('/pay', [PaymentController::class, 'pay']);
