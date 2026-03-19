@@ -6,7 +6,7 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Log;
 use App\Services\PaymentService;
 use App\Services\LoggerService;
-
+use App\Services\MathService;
 
 
 class AppServiceProvider extends ServiceProvider
@@ -22,6 +22,9 @@ class AppServiceProvider extends ServiceProvider
         });
         $this->app->singleton('logger.singleton', function () {
             return new LoggerService();
+        });
+        $this->app->singleton('math.service', function () {
+            return new MathService();
         });
     }
 

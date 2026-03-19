@@ -8,6 +8,7 @@ use App\Http\Controllers\PaymentController;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
 use App\Services\GreetingService;
+use App\Facades\Math;
 
 
 Route::get('/lifecycle', [LifecycleController::class, 'index'])
@@ -66,5 +67,24 @@ Route::get('/test-facade', function () {
     Log::info("Process ended");
     return $responseData = [
         'name_from_cache' => $cachedValue,
+    ];
+});
+
+Route::get('/math', function () {
+
+    $add        = Math::add(10, 5);        // 15
+    $subtract   = Math::subtract(10, 5);   // 5
+    $multiply   = Math::multiply(10, 5);   // 50
+    $divide     = Math::divide(10, 5);     // 2
+    $percentage = Math::percentage(200, 25); // 50
+
+    Log::info('Math via alias', compact('add', 'subtract', 'multiply', 'divide', 'percentage'));
+
+    return [
+        'add'        => $add,
+        'subtract'   => $subtract,
+        'multiply'   => $multiply,
+        'divide'     => $divide,
+        'percentage' => $percentage,
     ];
 });
