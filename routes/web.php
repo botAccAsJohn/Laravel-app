@@ -88,3 +88,65 @@ Route::get('/math', function () {
         'percentage' => $percentage,
     ];
 });
+
+Route::get('/get', function () {
+    Log::info('GET /get was visited');
+    return 'Hello from a GET route!';
+});
+
+Route::post('/post', function () {
+    return response()->json([
+        'message' => 'Received successfully',
+    ], 201);
+});
+
+Route::get('/getuser/{id?}', function (?string $id = null) {
+    if ($id == null) {
+        return "no userID is provided";
+    }
+    return "your userID is : " . $id;
+});
+
+// named route
+Route::get('/dashboard', function () {
+    return "this is dashboard";
+})->name('dashbord');
+Route::get('/redirect-to-dashboard', function () {
+    return redirect()->route('dashbord');
+});
+
+Route::redirect('/Home', '/dashboard');
+
+Route::group([], function () {
+    Route::get('/profile', function () {
+        return "this is profile";
+    });
+    Route::get('/settings', function () {
+        return "this is settings";
+    });
+});
+
+Route::prefix('admin')->group(function () {
+    Route::get('dashboard', function () {
+        return "this is admin dashboard";
+    });
+    Route::get('profile', function () {
+        return "this is admin profile";
+    });
+});
+
+// Route::get('/test-middleware', function () {
+//     return "This is a protected page.";
+// })->middleware('auth');
+// Route::middleware('auth')->group(function () {
+//     Route::get('/profile', function () {
+//         return "this is profile";
+//     });
+//     Route::get('/settings', function () {
+//         return "this is settings";
+//     });
+// });
+
+Route::fallback(function () {
+    return "404 Not Found";
+});
