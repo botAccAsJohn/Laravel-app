@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\LifecycleController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PaymentController;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
@@ -109,12 +110,12 @@ Route::get('/getuser/{id?}', function (?string $id = null) {
 });
 
 // named route
-Route::get('/dashboard', function () {
-    return "this is dashboard";
-})->name('dashbord');
-Route::get('/redirect-to-dashboard', function () {
-    return redirect()->route('dashbord');
-});
+// Route::get('/dashboard', function () {
+//     return "this is dashboard";
+// })->name('dashbord');
+// Route::get('/redirect-to-dashboard', function () {
+//     return redirect()->route('dashbord');
+// });
 
 Route::redirect('/Home', '/dashboard');
 
@@ -151,6 +152,8 @@ Route::prefix('admin')->group(function () {
 Route::get('/products/{product}', function (Product $product) {
     return $product; // this will search in model and return it if found
 });
+
+Route::get('/dashboard', DashboardController::class);
 
 
 Route::fallback(function () {

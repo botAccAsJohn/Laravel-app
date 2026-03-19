@@ -1,0 +1,17 @@
+[2026-03-19 08:03:04] local.INFO: [STEP 2b] AppServiceProvider register() called  
+[2026-03-19 08:03:04] local.INFO: [STEP 5] AppServiceProvider boot() called all services ready  
+[2026-03-19 08:07:46] local.INFO: [STEP 2b] AppServiceProvider register() called  
+[2026-03-19 08:07:46] local.INFO: [STEP 5] AppServiceProvider boot() called all services ready  
+[2026-03-19 09:07:49] [STEP 1] Entry point public/index.php reached
+[2026-03-19 08:07:49] local.INFO: [STEP 2b] AppServiceProvider register() called  
+[2026-03-19 08:07:49] local.INFO: [STEP 5] AppServiceProvider boot() called all services ready  
+[2026-03-19 08:07:49] local.INFO: [STEP 4] Middleware handle() BEFORE controller {"url":"http://127.0.0.1:8000/Home","method":"GET","ip":"127.0.0.1"} 
+[2026-03-19 08:07:50] local.INFO: [STEP 9-pre] Middleware handle() AFTER controller, returning
+response  
+[2026-03-19 09:07:50] [STEP 1] Entry point public/index.php reached
+[2026-03-19 08:07:50] local.INFO: [STEP 2b] AppServiceProvider register() called  
+[2026-03-19 08:07:50] local.INFO: [STEP 5] AppServiceProvider boot() called all services ready  
+[2026-03-19 08:07:50] local.INFO: [STEP 4] Middleware handle() BEFORE controller {"url":"http://127.0.0.1:8000/dashboard","method":"GET","ip":"127.0.0.1"} 
+[2026-03-19 08:07:50] local.INFO: Dashboard accessed {"ip":"127.0.0.1","user_agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36","time":"2026-03-19 08:07:50"} 
+[2026-03-19 08:07:50] local.INFO: [STEP 9-pre] Middleware handle() AFTER controller, returning
+response  
