@@ -9,9 +9,9 @@ use Symfony\Component\HttpFoundation\Response;
 
 class CheckRole
 {
-    public function handle(Request $request, Closure $next): Response
+    public function handle(Request $request, Closure $next, string $role): Response
     {
-        if ($request->input('role') !== 'admin') {
+        if ($request->input('role') !== $role) {
             return response("Access denied", 403);
         }
 

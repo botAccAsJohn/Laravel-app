@@ -153,8 +153,7 @@ Route::get('/products/{product}', function (Product $product) {
     return $product; // this will search in model and return it if found
 });
 
-Route::get('/dashboard', DashboardController::class)->middleware(\App\Http\Middleware\CheckRole::class);
-
+Route::get('/dashboard', DashboardController::class)->middleware('role:admin');
 
 Route::fallback(function () {
     return "404 Not Found";
