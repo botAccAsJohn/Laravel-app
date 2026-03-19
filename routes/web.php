@@ -153,7 +153,7 @@ Route::get('/products/{product}', function (Product $product) {
     return $product; // this will search in model and return it if found
 });
 
-Route::get('/dashboard', DashboardController::class);
+Route::get('/dashboard', DashboardController::class)->middleware(\App\Http\Middleware\CheckRole::class);
 
 
 Route::fallback(function () {
