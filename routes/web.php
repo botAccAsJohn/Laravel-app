@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
 use App\Services\GreetingService;
 use App\Facades\Math;
+use App\Models\Product;
 
 
 Route::get('/lifecycle', [LifecycleController::class, 'index'])
@@ -146,6 +147,11 @@ Route::prefix('admin')->group(function () {
 //         return "this is settings";
 //     });
 // });
+
+Route::get('/products/{product}', function (Product $product) {
+    return $product; // this will search in model and return it if found
+});
+
 
 Route::fallback(function () {
     return "404 Not Found";
