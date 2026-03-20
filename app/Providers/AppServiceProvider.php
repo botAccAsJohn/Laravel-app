@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Log;
 use App\Services\PaymentService;
 use App\Services\LoggerService;
 use App\Services\MathService;
-
+use Illuminate\Support\Facades\Response;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -32,5 +32,11 @@ class AppServiceProvider extends ServiceProvider
     {
         // [STEP 5] Runs after all providers are registered
         Log::info('[STEP 5] AppServiceProvider boot() called all services ready');
+        Response::macro('success', function ($data) {
+            return response()->json([
+                'status' => 'success',
+                'data' => $data
+            ]);
+        });
     }
 }

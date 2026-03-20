@@ -156,6 +156,8 @@ Route::get('/products/{product}', function (Product $product) {
 
 Route::get('/dashboard', DashboardController::class)->middleware('role:admin');
 
+Route::get('/custom', [Product2Controller::class, 'custom'])->name('custom');
+Route::get('/download', [Product2Controller::class, 'download'])->name('download');
 Route::resource('/products', Product2Controller::class);
 
 Route::fallback(function () {

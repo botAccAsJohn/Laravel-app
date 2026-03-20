@@ -2,14 +2,20 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\View\View;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
+
 class Product2Controller extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    // Call : GET => 127.0.0.1:8000/products
+    public function index(): View
     {
-        return "inside the product2 controller : index";
+        $products = ["Laptop", "Phone", "Tablet"];
+        return view('products.index', compact('products'));
     }
 
     /**
@@ -23,17 +29,24 @@ class Product2Controller extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store()
+    // Call : POST => 127.0.0.1:8000/products
+    public function store(): RedirectResponse
     {
-        return "inside the product2 controller : store";
+        return redirect('/products')->with('success', 'Product added!');
     }
 
     /**
      * Display the specified resource.
      */
-    public function show()
+    // Call : GET => 127.0.0.1:8000/products/1
+    public function show($id): JsonResponse
     {
-        return "inside the product2 controller : show";
+        $product = [
+            "id" => $id,
+            "name" => "Laptop",
+            "price" => 50000
+        ];
+        return response()->json($product);
     }
 
     /**
@@ -58,5 +71,22 @@ class Product2Controller extends Controller
     public function destroy()
     {
         return "inside the product2 controller : destroy";
+    }
+
+    // Call : GET => 127.0.0.1:8000/download
+    public function download()
+    {
+        $path = public_path('robots.txt');
+        return response()->download($path);
+    }
+
+    // Call : GET => 127.0.0.1:8000/custom
+    public function custom()
+    {
+        /** @phpstan-ignore-next-line */
+        return response()->success([
+            "name" => "Laptop",
+            "price" => 50000
+        ]);
     }
 }
