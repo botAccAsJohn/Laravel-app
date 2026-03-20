@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\Product2Controller;
 use App\Http\Controllers\LifecycleController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PaymentController;
@@ -154,6 +155,8 @@ Route::get('/products/{product}', function (Product $product) {
 });
 
 Route::get('/dashboard', DashboardController::class)->middleware('role:admin');
+
+Route::resource('/products', Product2Controller::class);
 
 Route::fallback(function () {
     return "404 Not Found";

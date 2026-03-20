@@ -14,7 +14,9 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->append(\App\Http\Middleware\LogRequestLifecycle::class);
         $middleware->validateCsrfTokens(except: [
-            '/post'
+            '/post',
+            '/products',
+            '/products/*',
         ]);
         $middleware->alias([
             'role' => CheckRole::class,
