@@ -4,7 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\View\View;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use App\Services\ProductService;
 
 class Product2Controller extends Controller
 {
@@ -12,9 +13,9 @@ class Product2Controller extends Controller
      * Display a listing of the resource.
      */
     // Call : GET => 127.0.0.1:8000/products
-    public function index(): View
+    public function index(ProductService $service): View
     {
-        $products = ["Laptop", "Phone", "Tablet"];
+        $products = $service->getAll();
         return view('products.index', compact('products'));
     }
 
@@ -30,9 +31,11 @@ class Product2Controller extends Controller
      * Store a newly created resource in storage.
      */
     // Call : POST => 127.0.0.1:8000/products
-    public function store(): RedirectResponse
+    public function store(Request $request, ProductService $service)
     {
-        return redirect('/products')->with('success', 'Product added!');
+        $data = $request->all();
+        $service->store($data);
+        return redirect('/products');
     }
 
     /**
