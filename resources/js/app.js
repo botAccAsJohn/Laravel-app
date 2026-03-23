@@ -1,2 +1,7 @@
-import "./bootstrap";
-console.log("Laravel Vite App Loaded!");
+import './bootstrap';
+
+import Alpine from 'alpinejs';
+
+window.Alpine = Alpine;
+
+Alpine.start();
