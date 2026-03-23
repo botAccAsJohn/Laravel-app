@@ -9,7 +9,20 @@ class ProductService
      */
     public function getAll()
     {
-        return ["Laptop", "Phone", "Tablet"];
+        return $products = [
+            [
+                'name' => 'Laptop',
+                'price' => 50000
+            ],
+            [
+                'name' => 'Phone',
+                'price' => 20000
+            ],
+            [
+                'name' => 'Headphones',
+                'price' => 3000
+            ],
+        ];
     }
 
     public function store($data)

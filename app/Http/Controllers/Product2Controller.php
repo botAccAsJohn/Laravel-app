@@ -6,6 +6,7 @@ use Illuminate\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Services\ProductService;
+use Illuminate\Support\Facades\Log;
 
 class Product2Controller extends Controller
 {
