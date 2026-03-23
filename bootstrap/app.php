@@ -17,6 +17,9 @@ return Application::configure(basePath: dirname(__DIR__))
             '/post',
             '/products',
             '/products/*',
+            '/ai/ask',
+            '/ai/chat',
+            '/ai/history',
         ]);
         $middleware->alias([
             'role' => CheckRole::class,

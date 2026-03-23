@@ -14,6 +14,11 @@ return [
     |
     */
 
+    'gemini' => [
+        'key'      => env('GEMINI_API_KEY'),
+        'base_url' => env('GEMINI_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta'),
+        'model'    => env('GEMINI_MODEL', 'gemini-1.5-flash'),
+    ],
     'postmark' => [
         'key' => env('POSTMARK_API_KEY'),
     ],

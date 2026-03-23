@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\AIController;
+
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -17,4 +19,9 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-require __DIR__.'/auth.php';
+Route::prefix('ai')->group(function () {
+    Route::post('/ask',     [AIController::class, 'ask']);
+    Route::post('/chat',    [AIController::class, 'chat']);
+});
+
+require __DIR__ . '/auth.php';

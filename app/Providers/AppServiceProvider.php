@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Log;
 use App\Services\PaymentService;
 use App\Services\LoggerService;
 use App\Services\MathService;
+use App\Services\AIService;
 use Illuminate\Support\Facades\Response;
 
 class AppServiceProvider extends ServiceProvider
@@ -25,6 +26,9 @@ class AppServiceProvider extends ServiceProvider
         });
         $this->app->singleton('math.service', function () {
             return new MathService();
+        });
+        $this->app->singleton(AIService::class, function () {
+            return new AIService();
         });
     }
 
