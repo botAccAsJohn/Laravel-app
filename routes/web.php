@@ -20,9 +20,9 @@ Route::middleware('auth')->group(function () {
 
 
 Route::middleware(['auth'])->group(function () {
-    Route::resource('products', Product2Controller::class)->only(['index', 'show']);
     Route::middleware(['role:admin'])->group(function () {
         Route::resource('products', Product2Controller::class)->except(['index', 'show']);
     });
+    Route::resource('products', Product2Controller::class)->only(['index', 'show']);
 });
 require __DIR__ . '/auth.php';

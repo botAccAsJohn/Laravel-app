@@ -26,6 +26,9 @@ class ProductFactory extends Factory
             // randomFloat(decimal_places, min, max)
             // generates a price between 5.00 and 500.00
 
+            'category'    => fake()->randomElement(['Electronics', 'Clothing', 'Books', 'Home', 'Sports']),
+            // random product category
+
             'slug'        => Str::slug($name) . '-' . fake()->unique()->randomNumber(4),
             // Str::slug() converts the name to a URL-friendly string
             // "Ergonomic Rubber Chair" → "ergonomic-rubber-chair"

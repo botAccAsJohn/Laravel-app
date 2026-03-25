@@ -28,7 +28,15 @@ class Product2Controller extends Controller
 
     public function store(StoreProductRequest $request)
     {
-        $this->service->create($request->validated());
+        $validated = $request->validated();
+
+        if ($request->hasFile('image')) {
+            // Check if file is valid, store in storage/app/public/products, and save path
+            $path = $request->file('image')->store('products', 'public');
+            $validated['image_path'] = $path;
+        }
+
+        $this->service->create($validated);
         return redirect()->route('products.index')->with('success', 'Product created.');
     }
 
@@ -45,7 +53,18 @@ class Product2Controller extends Controller
 
     public function update(UpdateProductRequest $request, Product $product)
     {
-        $this->service->update($product, $request->validated());
+        $validated = $request->validated();
+        if ($request->hasFile('image')) {
+            // Check if file is valid, store in storage/app/public/products, and save path
+            $path = $request->file('image')->store('products', 'public');
+            $validated['image_path'] = $path;
+            // Optional: You could also add logic here to delete the old image using Storage::disk('public')->delete($product->image_path);
+            if ($product->image_path) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($product->image_path);
+            }
+        }
+
+        $this->service->update($product, $validated);
         return redirect()->route('products.index')->with('success', 'Product updated.');
     }
 
