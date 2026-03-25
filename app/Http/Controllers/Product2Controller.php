@@ -18,7 +18,7 @@ class Product2Controller extends Controller
 
     public function index()
     {
-        return view('products.index', ['products' => $this->service->all()]);
+        return view('products.index', ['products' => $this->service->all(), 'total_products' => $this->service->count(), 'page_title' => 'All Products']);
     }
 
     public function create()

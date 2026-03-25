@@ -26,4 +26,8 @@ class ProductService
     {
         return $product->delete();
     }
+    public function count(): int
+    {
+        return Product::count();
+    }
 }
