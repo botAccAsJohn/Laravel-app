@@ -2,31 +2,28 @@
 
 namespace App\Services;
 
+use App\Models\Product;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+
 class ProductService
 {
-    /**
-     * Create a new class instance.
-     */
-    public function getAll()
+    public function all(): LengthAwarePaginator
     {
-        return $products = [
-            [
-                'name' => 'Laptop',
-                'price' => 50000
-            ],
-            [
-                'name' => 'Phone',
-                'price' => 20000
-            ],
-            [
-                'name' => 'Headphones',
-                'price' => 3000
-            ],
-        ];
+        return Product::latest()->paginate(config('admin.per_page'));
     }
 
-    public function store($data)
+    public function create(array $data): Product
     {
-        return "Product saved!";
+        return Product::create($data);
+    }
+
+    public function update(Product $product, array $data): bool
+    {
+        return $product->update($data);
+    }
+
+    public function delete(Product $product): bool
+    {
+        return $product->delete();
     }
 }

@@ -36,6 +36,10 @@ class AppServiceProvider extends ServiceProvider
     {
         // [STEP 5] Runs after all providers are registered
         Log::info('[STEP 5] AppServiceProvider boot() called all services ready');
+
+        \Illuminate\Support\Facades\RateLimiter::for('api', function (\Illuminate\Http\Request $request) {
+            return \Illuminate\Cache\RateLimiting\Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
+        });
         Response::macro('success', function ($data) {
             return response()->json([
                 'status' => 'success',

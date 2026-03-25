@@ -6,91 +6,52 @@ use Illuminate\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Services\ProductService;
+use App\Http\Requests\StoreProductRequest;
+use App\Http\Requests\UpdateProductRequest;
+use App\Models\Product;
 use Illuminate\Support\Facades\Log;
 
 class Product2Controller extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    // Call : GET => 127.0.0.1:8000/products
-    public function index(ProductService $service): View
+
+    public function __construct(private ProductService $service) {}
+
+    public function index()
     {
-        $products = $service->getAll();
-        return view('products.index', compact('products'));
+        return view('products.index', ['products' => $this->service->all()]);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create()
     {
-        return "inside the product2 controller : create";
+        return view('products.create');
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    // Call : POST => 127.0.0.1:8000/products
-    public function store(Request $request, ProductService $service)
+    public function store(StoreProductRequest $request)
     {
-        $data = $request->all();
-        $service->store($data);
-        return redirect('/products');
+        $this->service->create($request->validated());
+        return redirect()->route('products.index')->with('success', 'Product created.');
     }
 
-    /**
-     * Display the specified resource.
-     */
-    // Call : GET => 127.0.0.1:8000/products/1
-    public function show($id): JsonResponse
+    // Route model binding — Laravel resolves Product automatically
+    public function show(Product $product)
     {
-        $product = [
-            "id" => $id,
-            "name" => "Laptop",
-            "price" => 50000
-        ];
-        return response()->json($product);
+        return view('products.show', compact('product'));
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit()
+    public function edit(Product $product)
     {
-        return "inside the product2 controller : edit";
+        return view('products.edit', compact('product'));
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update()
+    public function update(UpdateProductRequest $request, Product $product)
     {
-        return "inside the product2 controller : update";
+        $this->service->update($product, $request->validated());
+        return redirect()->route('products.index')->with('success', 'Product updated.');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy()
+    public function destroy(Product $product)
     {
-        return "inside the product2 controller : destroy";
-    }
-
-    // Call : GET => 127.0.0.1:8000/download
-    public function download()
-    {
-        $path = public_path('robots.txt');
-        return response()->download($path);
-    }
-
-    // Call : GET => 127.0.0.1:8000/custom
-    public function custom()
-    {
-        /** @phpstan-ignore-next-line */
-        return response()->success([
-            "name" => "Laptop",
-            "price" => 50000
-        ]);
+        $this->service->delete($product);
+        return redirect()->route('products.index')->with('success', 'Product deleted.');
     }
 }

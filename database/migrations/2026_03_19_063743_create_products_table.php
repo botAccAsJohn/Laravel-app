@@ -22,6 +22,8 @@ return new class extends Migration
             // text() = TEXT column — longer content
             // nullable() means this column can be empty (NULL)
 
+            $table->integer('quantity')->default(0);
+
             $table->decimal('price', 8, 2);
             // decimal(total_digits, decimal_places)
             // 8, 2 means up to 999999.99 — perfect for prices

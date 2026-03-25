@@ -11,10 +11,9 @@ class CheckRole
 {
     public function handle(Request $request, Closure $next, string $role): Response
     {
-        if ($request->input('role') !== $role) {
-            return response("Access denied", 403);
+        if (auth()->user()->role !== $role) {
+            abort(403, 'Unauthorized.');
         }
-
         return $next($request);
     }
 }

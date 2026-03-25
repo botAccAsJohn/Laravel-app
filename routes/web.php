@@ -1,8 +1,7 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\AIController;
-
+use App\Http\Controllers\Product2Controller;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -19,9 +18,11 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-Route::prefix('ai')->group(function () {
-    Route::post('/ask',     [AIController::class, 'ask']);
-    Route::post('/chat',    [AIController::class, 'chat']);
-});
 
+Route::middleware(['auth'])->group(function () {
+    Route::resource('products', Product2Controller::class)->only(['index', 'show']);
+    Route::middleware(['role:admin'])->group(function () {
+        Route::resource('products', Product2Controller::class)->except(['index', 'show']);
+    });
+});
 require __DIR__ . '/auth.php';
