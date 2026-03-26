@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Log;
 use App\Services\PaymentService;
 use App\Services\LoggerService;
 use App\Services\MathService;
+use Illuminate\Support\Facades\Blade;
 use App\Services\AIService;
 use Illuminate\Support\Facades\Response;
 
@@ -39,6 +40,9 @@ class AppServiceProvider extends ServiceProvider
 
         \Illuminate\Support\Facades\RateLimiter::for('api', function (\Illuminate\Http\Request $request) {
             return \Illuminate\Cache\RateLimiting\Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
+        });
+        Blade::directive('currency', function ($amount) {
+            return "<?php echo '₹' . number_format($amount, 2); ?>";
         });
         Response::macro('success', function ($data) {
             return response()->json([
