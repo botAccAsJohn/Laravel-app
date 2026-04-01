@@ -17,44 +17,90 @@
     </div>
     @endif
 
-    <form action="{{ route('products.store') }}" method="POST" enctype="multipart/form-data" class="bg-white shadow-md rounded-lg p-6">
+    <form action="{{ route('products.store') }}" method="POST" enctype="multipart/form-data"
+          class="bg-white shadow-md rounded-lg p-6 space-y-4">
         @csrf
 
-        <div class="mb-4">
-            <label class="block text-gray-700 font-bold mb-2">Name</label>
-            <input type="text" name="name" value="{{ old('name') }}" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+        {{-- Name --}}
+        <div>
+            <label class="block text-gray-700 font-bold mb-1">Name <span class="text-red-500">*</span></label>
+            <input type="text" name="name" value="{{ old('name') }}"
+                   class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
         </div>
 
-        <div class="mb-4">
-            <label class="block text-gray-700 font-bold mb-2">Slug</label>
-            <input type="text" name="slug" value="{{ old('slug') }}" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+        {{-- Slug --}}
+        <div>
+            <label class="block text-gray-700 font-bold mb-1">Slug</label>
+            <input type="text" name="slug" value="{{ old('slug') }}"
+                   class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                   placeholder="auto-generated if left blank">
         </div>
 
-        <div class="mb-4">
-            <label class="block text-gray-700 font-bold mb-2">Description</label>
-            <textarea name="description" rows="4" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>{{ old('description') }}</textarea>
+        {{-- Description --}}
+        <div>
+            <label class="block text-gray-700 font-bold mb-1">Description</label>
+            <textarea name="description" rows="4"
+                      class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">{{ old('description') }}</textarea>
         </div>
 
-        <div class="mb-4">
-            <label class="block text-gray-700 font-bold mb-2">Price</label>
-            <input type="number" step="0.01" name="price" value="{{ old('price') }}" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-        </div>
-        <div class="mb-4">
-            <label class="block text-gray-700 font-bold mb-2">category</label>
-            <input type="text" name="category" value="{{ old('category') }}" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-        </div>
-        <div class="mb-4">
-            <label class="block text-gray-700 font-bold mb-2">Image</label>
-            <input type="file" name="image" value="{{ old('image') }}" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+        {{-- Price --}}
+        <div>
+            <label class="block text-gray-700 font-bold mb-1">Price (₹) <span class="text-red-500">*</span></label>
+            <input type="number" step="0.01" name="price" value="{{ old('price') }}" min="0.01"
+                   class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
         </div>
 
-        <div class="mb-6 flex items-center">
+        {{-- Discount Price --}}
+        <div>
+            <label class="block text-gray-700 font-bold mb-1">Discount Price (₹)
+                <span class="text-gray-400 font-normal text-sm">— optional</span>
+            </label>
+            <input type="number" step="0.01" name="discount_price" value="{{ old('discount_price') }}" min="0.01"
+                   class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+
+        {{-- Category --}}
+        <div>
+            <label class="block text-gray-700 font-bold mb-1">Category</label>
+            <select name="category_id" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <option value="">— None —</option>
+                @foreach($categories as $category)
+                    <option value="{{ $category->id }}" {{ old('category_id') == $category->id ? 'selected' : '' }}>
+                        {{ $category->name }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+
+        {{-- Tags --}}
+        <div>
+            <label class="block text-gray-700 font-bold mb-1">Tags
+                <span class="text-gray-400 font-normal text-sm">— comma-separated, e.g. sale, featured</span>
+            </label>
+            <input type="text" name="tags" value="{{ old('tags') }}"
+                   class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                   placeholder="sale, new-arrival, featured">
+        </div>
+
+        {{-- Image --}}
+        <div>
+            <label class="block text-gray-700 font-bold mb-1">Image</label>
+            <input type="file" name="image" accept="image/jpg,image/jpeg,image/png"
+                   class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+
+        {{-- Is Active --}}
+        <div class="flex items-center">
             <input type="hidden" name="is_active" value="0">
-            <input type="checkbox" name="is_active" value="1" {{ old('is_active', 1) ? 'checked' : '' }} class="mr-2">
-            <label class="text-gray-700 font-bold">Is Active</label>
+            <input type="checkbox" id="is_active" name="is_active" value="1"
+                   {{ old('is_active', 1) ? 'checked' : '' }} class="mr-2">
+            <label for="is_active" class="text-gray-700 font-bold">Active</label>
         </div>
 
-        <button type="submit" class="w-full bg-indigo-600 text-white font-bold py-2 px-4 rounded hover:bg-indigo-700 transition">Save Product</button>
+        <button type="submit"
+                class="w-full bg-indigo-600 text-white font-bold py-2 px-4 rounded hover:bg-indigo-700 transition">
+            Save Product
+        </button>
     </form>
 </div>
 @endsection

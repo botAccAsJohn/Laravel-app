@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Category;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Database\Seeder;
@@ -11,35 +12,43 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // Default Admin
+        // ── Users ─────────────────────────────────────────────────────────────
+
         User::updateOrCreate(
             ['email' => 'admin@example.com'],
             [
-                'name' => 'Admin User',
+                'name'     => 'Admin User',
                 'password' => Hash::make('password'),
-                'role' => 'admin',
+                'role'     => 'admin',
             ]
         );
 
-        // Default User
         User::updateOrCreate(
             ['email' => 'user@example.com'],
             [
-                'name' => 'Regular User',
+                'name'     => 'Regular User',
                 'password' => Hash::make('password'),
-                'role' => 'user',
+                'role'     => 'user',
             ]
         );
 
-        // Create 10 fake products using our factory
+        // ── Categories (must run before Products — FK dependency) ─────────────
+
+        $this->call(CategorySeeder::class);
+
+        // ── Products ──────────────────────────────────────────────────────────
+
         Product::factory(10)->create();
 
-        // You can also create specific products for testing
+        // Specific product for e2e testing
         Product::factory()->create([
-            'name'      => 'Test Laptop',
-            'price'     => 999.99,
-            'slug'      => 'test-laptop',
-            'is_active' => true,
+            'name'           => 'Test Laptop',
+            'price'          => 999.99,
+            'discount_price' => 849.99,
+            'tags'           => ['electronics', 'featured', 'sale'],
+            'slug'           => 'test-laptop',
+            'is_active'      => true,
+            'category_id'    => Category::where('name', 'Electronics')->value('id'),
         ]);
     }
 }

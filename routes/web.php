@@ -2,9 +2,12 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Product2Controller;
+use App\Http\Controllers\CartController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Redis;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\Auth;
 
 Route::get('/', function () {
     return view('welcome');
@@ -40,7 +43,7 @@ Route::get('/generate-link/{id}', function ($id) {
 });
 
 Route::get('/unsubscribe/{user}', function (Request $request, $user) {
-    if (! $request->hasValidSignature()) {
+    if (!$request->hasValidSignature()) {
         abort(403, 'Invalid or expired link');
     }
     return "User {$user} unsubscribed successfully";
@@ -52,5 +55,34 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('products', Product2Controller::class)->except(['index', 'show']);
     });
     Route::resource('products', Product2Controller::class)->only(['index', 'show']);
+
+    // Cart Routes
+    Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
+    Route::post('/cart/add/{productId}', [CartController::class, 'add'])->name('cart.add');
+    Route::post('/cart/decrement/{productId}', [CartController::class, 'decrement'])->name('cart.decrement');
+    Route::post('/cart/remove/{productId}', [CartController::class, 'remove'])->name('cart.remove');
+    Route::post('/cart/clear', [CartController::class, 'clear'])->name('cart.clear');
+
+    // Recently Viewed Routes
+    Route::get('/recently-viewed', [\App\Http\Controllers\RecentlyViewController::class, 'index'])->name('recently.index');
+    Route::post('/recently-viewed/clear', [\App\Http\Controllers\RecentlyViewController::class, 'clear'])->name('recently.clear');
+
+    // Logs Route
+    Route::get('/logs', [Product2Controller::class, 'logs'])->name('logs.index');
 });
+
+
+
+Route::get('/redis', function () {
+    $user = Auth::user()->name;
+    dd($user);
+
+    // return \App::environment();
+});
+
+
+Route::get('/export-products', [Product2Controller::class, 'exportProducts'])->name('products.export');
+
+
+
 require __DIR__ . '/auth.php';

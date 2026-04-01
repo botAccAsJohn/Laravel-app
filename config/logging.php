@@ -89,7 +89,7 @@ return [
             'handler_with' => [
                 'host' => env('PAPERTRAIL_URL'),
                 'port' => env('PAPERTRAIL_PORT'),
-                'connectionString' => 'tls://'.env('PAPERTRAIL_URL').':'.env('PAPERTRAIL_PORT'),
+                'connectionString' => 'tls://' . env('PAPERTRAIL_URL') . ':' . env('PAPERTRAIL_PORT'),
             ],
             'processors' => [PsrLogMessageProcessor::class],
         ],
@@ -118,13 +118,38 @@ return [
             'replace_placeholders' => true,
         ],
 
-        'null' => [
-            'driver' => 'monolog',
-            'handler' => NullHandler::class,
+        'orders' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/orders/orders.log'),
+            'level' => 'info',
+            'days' => 7,
         ],
 
-        'emergency' => [
-            'path' => storage_path('logs/laravel.log'),
+        'products' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/products/products.log'),
+            'level' => 'debug',
+            'days' => 14,
+        ],
+
+        'cart' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/cart/cart.log'),
+            'level' => 'debug',
+            'days' => 7,
+        ],
+
+        'DBInteraction' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/db/db.log'),
+            'level' => 'debug',
+            'days' => 14,
+        ],
+        'RedisInteraction' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/redis/log.log'),
+            'level' => 'debug',
+            'days' => 14,
         ],
 
     ],

@@ -1,0 +1,203 @@
+<?php
+
+namespace App\Services;
+
+use App\Exceptions\ProductOutOfStockException;
+use App\Models\Product;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Redis;
+
+class CartService
+{
+    private string $prefix = 'cart:user:';
+
+    // ── Redis key ─────────────────────────────────────────────────────────────
+
+    private function getKey(int $userId): string
+    {
+        return $this->prefix . $userId;
+    }
+
+    // ── Read ──────────────────────────────────────────────────────────────────
+
+    /**
+     * Return all cart items stored in Redis for a user.
+     * Each item: ['id', 'name', 'price', 'quantity']
+     */
+    public function get(int $userId): array
+    {
+        $raw = Redis::get($this->getKey($userId));
+        return $raw ? json_decode($raw, true) : [];
+    }
+
+    /**
+     * Hydrate full Eloquent models for every item currently in the cart.
+     * Keyed by product ID so blade templates can do $cartModels[$item['id']].
+     *
+     * @return Collection<int, Product>
+     */
+    public function getCartModels(int $userId): Collection
+    {
+        $cart = $this->get($userId);
+        $ids  = array_column($cart, 'id');
+
+        return Product::whereIn('id', $ids)->get()->keyBy('id');
+    }
+
+    /**
+     * Calculate the grand total using the effective price per item.
+     * Uses discount_price from the DB model when available,
+     * otherwise falls back to the price stored in Redis at add-time.
+     */
+    public function total(int $userId): float
+    {
+        $cart   = $this->get($userId);
+        $models = $this->getCartModels($userId);
+        $total  = 0.0;
+
+        foreach ($cart as $productId => $item) {
+            $model         = $models[$productId] ?? null;
+            $effectivePrice = $model && $model->discount_price
+                ? (float) $model->discount_price
+                : (float) $item['price'];
+
+            $total += $effectivePrice * $item['quantity'];
+        }
+
+        return $total;
+    }
+
+    // ── Write ─────────────────────────────────────────────────────────────────
+
+    /**
+     * Add a product to the cart (or increment its quantity).
+     * Resolves the product from the DB and throws if it does not exist.
+     *
+     * @throws ProductOutOfStockException  When the product is not found in the DB.
+     */
+    public function add(int $userId, int $productId, int $quantity = 1): Product
+    {
+        $product = Product::find($productId);
+
+        if (!$product) {
+            throw new ProductOutOfStockException(
+                productName:  "Product #{$productId}",
+                productId:    $productId,
+                requestedQty: $quantity,
+                availableQty: 0,
+            );
+        }
+
+        $cart = $this->get($userId);
+
+        if (isset($cart[$productId])) {
+            $cart[$productId]['quantity'] += $quantity;
+        } else {
+            $cart[$productId] = [
+                'id'       => $product->id,
+                'name'     => $product->name,
+                'price'    => $product->price,
+                'quantity' => $quantity,
+            ];
+        }
+
+        $this->save($userId, $cart);
+
+        Log::channel('cart')->info('Item added to cart', [
+            'user_id'    => $userId,
+            'product_id' => $product->id,
+            'name'       => $product->name,
+            'quantity'   => $cart[$productId]['quantity'],
+        ]);
+
+        return $product;
+    }
+
+    /**
+     * Remove a single item from the cart entirely.
+     */
+    public function remove(int $userId, int $productId): void
+    {
+        $cart = $this->get($userId);
+
+        if (isset($cart[$productId])) {
+            $name = $cart[$productId]['name'] ?? "Product #{$productId}";
+            unset($cart[$productId]);
+            $this->save($userId, $cart);
+
+            Log::channel('cart')->info('Item removed from cart', [
+                'user_id'    => $userId,
+                'product_id' => $productId,
+                'name'       => $name,
+            ]);
+        }
+    }
+
+    /**
+     * Decrement quantity by 1; remove the item entirely when quantity reaches 0.
+     */
+    public function decrement(int $userId, int $productId): void
+    {
+        $cart = $this->get($userId);
+
+        if (!isset($cart[$productId])) {
+            return; // item not in cart — nothing to do
+        }
+
+        if ($cart[$productId]['quantity'] > 1) {
+            $cart[$productId]['quantity']--;
+            $this->save($userId, $cart);
+
+            Log::channel('cart')->debug('Item quantity decremented', [
+                'user_id'      => $userId,
+                'product_id'   => $productId,
+                'new_quantity' => $cart[$productId]['quantity'],
+            ]);
+        } else {
+            $this->remove($userId, $productId);
+        }
+    }
+
+    /**
+     * Set an item's quantity explicitly; removes item when $quantity <= 0.
+     */
+    public function updateQuantity(int $userId, int $productId, int $quantity): void
+    {
+        if ($quantity <= 0) {
+            $this->remove($userId, $productId);
+            return;
+        }
+
+        $cart = $this->get($userId);
+        if (isset($cart[$productId])) {
+            $cart[$productId]['quantity'] = $quantity;
+            $this->save($userId, $cart);
+
+            Log::channel('cart')->debug('Item quantity updated', [
+                'user_id'    => $userId,
+                'product_id' => $productId,
+                'quantity'   => $quantity,
+            ]);
+        }
+    }
+
+    /**
+     * Remove all items from the user's cart.
+     */
+    public function clear(int $userId): void
+    {
+        Redis::del($this->getKey($userId));
+
+        Log::channel('cart')->info('Cart cleared', ['user_id' => $userId]);
+    }
+
+    // ── Private helpers ───────────────────────────────────────────────────────
+
+    private function save(int $userId, array $cart): void
+    {
+        $key = $this->getKey($userId);
+        Redis::set($key, json_encode($cart));
+        Redis::expire($key, 60 * 60 * 24 * 30); // 30-day TTL
+    }
+}
