@@ -21,14 +21,14 @@ class Product2Controller extends Controller
     public function __construct(
         private ProductService $service,
         private RecentlyViewServices $recentService
-    ) {
-    }
+    ) {}
 
     public function index(): View
     {
+        $products = $this->service->all();
         return view('products.index', [
-            'products' => $this->service->all(),
-            'total_products' => $this->service->count(),
+            'products' => $products,
+            'total_products' => count($products),
             'page_title' => 'All Products',
         ]);
     }
@@ -89,7 +89,7 @@ class Product2Controller extends Controller
     {
         $logType = $request->query('type', 'products');
         $validTypes = ['db', 'products', 'orders'];
-        
+
         if (!in_array($logType, $validTypes)) {
             $logType = 'products';
         }

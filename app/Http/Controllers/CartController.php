@@ -24,9 +24,10 @@ class CartController extends Controller
 
     public function add(int $productId)
     {
-        $userId = Auth::id();
+        $userId   = Auth::id();
+        $quantity = (int) request('quantity', 1);
         try {
-            $product = $this->cartService->add($userId, $productId);
+            $product = $this->cartService->add($userId, $productId, $quantity);
             return redirect()->back()->with('success', "{$product->name} added to cart.");
         } catch (ProductOutOfStockException) {
             return redirect()->back()->with('error', 'Product not found.');

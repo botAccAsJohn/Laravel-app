@@ -3,6 +3,7 @@
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Product2Controller;
 use App\Http\Controllers\CartController;
+use App\Http\Controllers\OrderController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Http\Request;
@@ -63,21 +64,17 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/cart/remove/{productId}', [CartController::class, 'remove'])->name('cart.remove');
     Route::post('/cart/clear', [CartController::class, 'clear'])->name('cart.clear');
 
+    // Order Cancel Route
+    Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
+
     // Recently Viewed Routes
     Route::get('/recently-viewed', [\App\Http\Controllers\RecentlyViewController::class, 'index'])->name('recently.index');
     Route::post('/recently-viewed/clear', [\App\Http\Controllers\RecentlyViewController::class, 'clear'])->name('recently.clear');
 
+    Route::resource('orders', OrderController::class);
+
     // Logs Route
     Route::get('/logs', [Product2Controller::class, 'logs'])->name('logs.index');
-});
-
-
-
-Route::get('/redis', function () {
-    $user = Auth::user()->name;
-    dd($user);
-
-    // return \App::environment();
 });
 
 

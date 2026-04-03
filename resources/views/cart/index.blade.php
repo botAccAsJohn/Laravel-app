@@ -7,7 +7,7 @@
     <div class="max-w-7xl mx-auto px-4 flex flex-col lg:flex-row gap-6">
 
         {{-- LEFT COLUMN: CART ITEMS --}}
-        <div class="w-full lg:w-3/4 flex flex-col gap-4">
+        <div class="w-full {{ empty($cart) ? 'max-w-4xl mx-auto py-10' : 'lg:w-3/4' }} flex flex-col gap-4">
             <div class="bg-white p-6 shadow-sm">
                 <div class="flex justify-between items-end border-b pb-2 mb-4">
                     <h1 class="text-3xl font-medium text-gray-900">Shopping Cart</h1>
@@ -15,9 +15,18 @@
                 </div>
 
                 @empty($cart)
-                    <div class="py-8 text-center text-gray-600">
-                        <p class="text-lg mb-4">Your Shopping Cart is empty.</p>
-                        <a href="{{ route('products.index') }}" class="text-blue-600 hover:underline">Shop for exciting products here!</a>
+                    <div class="py-16 mt-12 text-center text-gray-600 flex flex-col items-center">
+                        <div class="mb-6 p-4 bg-gray-50 rounded-full border border-gray-100 shadow-inner text-gray-300">
+                            <svg class="h-20 w-20 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 11V8m0 0L10 10m2-2l2 2" />
+                            </svg>
+                        </div>
+                        <p class="text-2xl font-semibold text-gray-900 mb-2">Your Shopping Cart is empty.</p>
+                        <p class="text-gray-500 mb-8 max-w-xs px-4 mx-auto">Your cart is feeling a bit light! Let's find some amazing products for you.</p>
+                        <a href="{{ route('products.index') }}" class="inline-flex items-center px-8 py-3 bg-blue-600 text-white font-bold rounded-full hover:bg-blue-700 shadow-md transition-all duration-300 hover:-translate-y-1">
+                            Explore Products
+                        </a>
                     </div>
                 @else
                     @foreach ($cart as $item)
@@ -133,8 +142,8 @@
         </div>
 
         {{-- RIGHT COLUMN: CHECKOUT --}}
-        <div class="w-full lg:w-1/4">
-            @if(!empty($cart))
+        @if(!empty($cart))
+            <div class="w-full lg:w-1/4">
                 <div class="bg-white p-6 shadow-sm mb-4">
                     
                     {{-- Free Delivery Promo --}}
@@ -156,17 +165,18 @@
                         <span>This order contains a gift</span>
                     </div>
 
-                    <button class="w-full bg-yellow-400 hover:bg-yellow-500 shadow-sm border border-yellow-500 rounded-full py-2 px-4 shadow-sm text-sm text-gray-900 transition mb-4">
+                    <a href="{{ route('orders.create') }}"
+                       class="block w-full text-center bg-yellow-400 hover:bg-yellow-500 shadow-sm border border-yellow-500 rounded-full py-2 px-4 text-sm text-gray-900 transition mb-4">
                         Proceed to Buy
-                    </button>
+                    </a>
 
                     <div class="border border-gray-200 rounded p-2 text-sm text-gray-800 flex justify-between items-center bg-gray-50 cursor-pointer shadow-sm">
                         <span>EMI Available</span>
                         <svg class="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
                     </div>
                 </div>
-            @endif
-        </div>
+            </div>
+        @endif
 
     </div>
 </div>

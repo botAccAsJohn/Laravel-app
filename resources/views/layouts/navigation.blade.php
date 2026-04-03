@@ -15,18 +15,25 @@
                     <x-nav-link :href="route('recently.index')" :active="request()->routeIs('recently.*')">
                         {{ __('Recently Viewed') }}
                     </x-nav-link>
+                    @if (auth()->user()->role === 'admin')
                     <x-nav-link :href="route('logs.index')" :active="request()->routeIs('logs.*')">
                         {{ __('Logs') }}
+                    </x-nav-link>
+                    @endif
+                    <x-nav-link :href="route('orders.index')" :active="request()->routeIs('orders.*')">
+                        {{ __('Orders') }}
                     </x-nav-link>
                 </div>
             </div>
 
             <!-- Settings Dropdown -->
             <div class="hidden sm:flex sm:items-center sm:ms-6 sm:gap-4">
+                @if (auth()->user()->role === 'admin')
                 <a href="{{ route('products.export') }}"
                     class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none transition ease-in-out duration-150">
                     {{ __('Export Products') }}
                 </a>
+                @endif
                 <x-dropdown align="right" width="48">
                     <x-slot name="trigger">
                         <button

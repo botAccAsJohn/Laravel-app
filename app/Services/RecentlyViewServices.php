@@ -94,6 +94,6 @@ class RecentlyViewServices
     {
         $key = $this->getKey($userId);
         Redis::set($key, json_encode(array_values($ids)));
-        Redis::expire($key, 60 * 60 * 24 * 30); // 30-day TTL
+        Redis::expire($key, 60 * 60 * 24 * 7); // 7-day TTL
     }
 }

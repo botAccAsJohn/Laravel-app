@@ -52,6 +52,42 @@
             @endif
         </div>
 
+        {{-- Add to Cart Section --}}
+        <div class="mb-8">
+            @if($product->is_active)
+                <form action="{{ route('cart.add', $product->id) }}" method="POST" class="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+                    @csrf
+                    <div class="flex items-center justify-between border border-gray-300 rounded-lg overflow-hidden bg-white shadow-sm w-full sm:w-auto">
+                        <button type="button" 
+                                onclick="const q = document.getElementById('qty'); q.value = Math.max(1, parseInt(q.value)-1);" 
+                                class="px-4 py-3 bg-gray-50 hover:bg-gray-100 transition text-gray-600 font-bold text-xl">-</button>
+                        <input type="number" name="quantity" id="qty" value="1" min="1" 
+                               class="w-16 text-center border-none bg-transparent focus:ring-0 font-semibold text-lg" readonly>
+                        <button type="button" 
+                                onclick="const q = document.getElementById('qty'); q.value = parseInt(q.value)+1;" 
+                                class="px-4 py-3 bg-gray-50 hover:bg-gray-100 transition text-gray-600 font-bold text-xl">+</button>
+                    </div>
+                    
+                    <button type="submit" 
+                            class="flex-1 bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-gray-900 font-bold py-4 px-8 rounded-lg shadow-md transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-3">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+                        </svg>
+                        <span class="text-lg">Add to Cart</span>
+                    </button>
+                </form>
+                <p class="text-xs text-gray-500 mt-3 flex items-center gap-1">
+                    <svg class="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                    Secure transaction • Eligible for FREE Shipping
+                </p>
+            @else
+                <div class="p-4 bg-red-50 text-red-700 border border-red-200 rounded-lg flex items-center gap-3 shadow-sm">
+                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/></svg>
+                    <span class="font-semibold px-4">This product is currently out of stock or unavailable.</span>
+                </div>
+            @endif
+        </div>
+
         {{-- Tags --}}
         @if($product->tags && count($product->tags))
             <div class="flex flex-wrap gap-2 mb-6">

@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Services\OrderService;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Log;
 use App\Services\PaymentService;
@@ -33,6 +34,9 @@ class AppServiceProvider extends ServiceProvider
         });
         $this->app->singleton(AIService::class, function () {
             return new AIService();
+        });
+        $this->app->bind(OrderService::class, function ($app) {
+            return new OrderService($app->make(\App\Services\CartService::class));
         });
     }
 
