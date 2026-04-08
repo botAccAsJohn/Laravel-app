@@ -3,15 +3,17 @@
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Product2Controller;
 use App\Http\Controllers\CartController;
+use App\Http\Controllers\CacheMonitorController;
 use App\Http\Controllers\OrderController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Redis;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Auth;
 
 Route::get('/', function () {
-    return view('welcome');
+    event(new MyEvent('hello world'));
 });
 
 Route::get('/dashboard', function () {
@@ -54,6 +56,10 @@ Route::get('/unsubscribe/{user}', function (Request $request, $user) {
 Route::middleware(['auth'])->group(function () {
     Route::middleware(['role:admin'])->group(function () {
         Route::resource('products', Product2Controller::class)->except(['index', 'show']);
+
+        // Cache Monitor (admin only)
+        Route::get('/admin/cache',       [CacheMonitorController::class, 'index'])->name('admin.cache.index');
+        Route::post('/admin/cache/clear', [CacheMonitorController::class, 'clear'])->name('admin.cache.clear');
     });
     Route::resource('products', Product2Controller::class)->only(['index', 'show']);
 

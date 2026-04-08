@@ -19,6 +19,9 @@
                     <x-nav-link :href="route('logs.index')" :active="request()->routeIs('logs.*')">
                         {{ __('Logs') }}
                     </x-nav-link>
+                    <x-nav-link :href="route('admin.cache.index')" :active="request()->routeIs('admin.cache.*')">
+                        {{ __('Cache Monitor') }}
+                    </x-nav-link>
                     @endif
                     <x-nav-link :href="route('orders.index')" :active="request()->routeIs('orders.*')">
                         {{ __('Orders') }}

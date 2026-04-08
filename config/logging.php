@@ -129,7 +129,7 @@ return [
             'driver' => 'daily',
             'path' => storage_path('logs/products/products.log'),
             'level' => 'debug',
-            'days' => 14,
+            'days' => 7,
         ],
 
         'cart' => [
@@ -143,7 +143,7 @@ return [
             'driver' => 'daily',
             'path' => storage_path('logs/db/db.log'),
             'level' => 'debug',
-            'days' => 14,
+            'days' => 17,
         ],
         'RedisInteraction' => [
             'driver' => 'daily',

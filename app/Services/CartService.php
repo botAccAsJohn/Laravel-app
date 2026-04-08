@@ -7,6 +7,7 @@ use App\Models\Product;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redis;
+use Illuminate\Support\Facades\Cache;
 
 class CartService
 {
@@ -34,6 +35,7 @@ class CartService
     /**
      * Hydrate full Eloquent models for every item currently in the cart.
      * Keyed by product ID so blade templates can do $cartModels[$item['id']].
+     * Falls back to a DB query when the products cache is cold.
      *
      * @return Collection<int, Product>
      */
@@ -42,22 +44,45 @@ class CartService
         $cart = $this->get($userId);
         $ids  = array_column($cart, 'id');
 
+        if (empty($ids)) {
+            return new Collection();
+        }
+
+        // Try warm cache first
+        $cached = Cache::get(ProductService::CACHE_KEY_ALL);
+        if ($cached) {
+            return new Collection(
+                $cached->filter(fn($p) => in_array($p->id, $ids))->keyBy('id')
+            );
+        }
+
+        // Cold cache — fall back to a targeted DB query
         return Product::whereIn('id', $ids)->get()->keyBy('id');
     }
 
     /**
      * Calculate the grand total using the effective price per item.
-     * Uses discount_price from the DB model when available,
-     * otherwise falls back to the price stored in Redis at add-time.
+     * Accepts pre-fetched $cart and $models to avoid redundant reads.
+     * When called without arguments it fetches them itself.
      */
     public function total(int $userId): float
     {
         $cart   = $this->get($userId);
         $models = $this->getCartModels($userId);
-        $total  = 0.0;
+
+        return $this->calcTotal($cart, $models);
+    }
+
+    /**
+     * Compute the grand total from already-loaded cart data.
+     * Used by cartSummary() to avoid re-fetching cart + models.
+     */
+    public function calcTotal(array $cart, Collection $models): float
+    {
+        $total = 0.0;
 
         foreach ($cart as $productId => $item) {
-            $model         = $models[$productId] ?? null;
+            $model = $models[$productId] ?? null;
             $effectivePrice = $model && $model->discount_price
                 ? (float) $model->discount_price
                 : (float) $item['price'];
@@ -72,18 +97,18 @@ class CartService
 
     /**
      * Add a product to the cart (or increment its quantity).
-     * Resolves the product from the DB and throws if it does not exist.
+     * Resolves the product from the cache first, DB second.
      *
-     * @throws ProductOutOfStockException  When the product is not found in the DB.
+     * @throws ProductOutOfStockException  When the product is not found.
      */
     public function add(int $userId, int $productId, int $quantity = 1): Product
     {
-        $product = Product::find($productId);
+        $product = $this->findProduct($productId);
 
         if (!$product) {
             throw new ProductOutOfStockException(
-                productName:  "Product #{$productId}",
-                productId:    $productId,
+                productName: "Product #{$productId}",
+                productId: $productId,
                 requestedQty: $quantity,
                 availableQty: 0,
             );
@@ -95,9 +120,9 @@ class CartService
             $cart[$productId]['quantity'] += $quantity;
         } else {
             $cart[$productId] = [
-                'id'       => $product->id,
-                'name'     => $product->name,
-                'price'    => $product->price,
+                'id' => $product->id,
+                'name' => $product->name,
+                'price' => $product->price,
                 'quantity' => $quantity,
             ];
         }
@@ -105,10 +130,10 @@ class CartService
         $this->save($userId, $cart);
 
         Log::channel('cart')->info('Item added to cart', [
-            'user_id'    => $userId,
+            'user_id' => $userId,
             'product_id' => $product->id,
-            'name'       => $product->name,
-            'quantity'   => $cart[$productId]['quantity'],
+            'name' => $product->name,
+            'quantity' => $cart[$productId]['quantity'],
         ]);
 
         return $product;
@@ -127,9 +152,9 @@ class CartService
             $this->save($userId, $cart);
 
             Log::channel('cart')->info('Item removed from cart', [
-                'user_id'    => $userId,
+                'user_id' => $userId,
                 'product_id' => $productId,
-                'name'       => $name,
+                'name' => $name,
             ]);
         }
     }
@@ -150,8 +175,8 @@ class CartService
             $this->save($userId, $cart);
 
             Log::channel('cart')->debug('Item quantity decremented', [
-                'user_id'      => $userId,
-                'product_id'   => $productId,
+                'user_id' => $userId,
+                'product_id' => $productId,
                 'new_quantity' => $cart[$productId]['quantity'],
             ]);
         } else {
@@ -175,9 +200,9 @@ class CartService
             $this->save($userId, $cart);
 
             Log::channel('cart')->debug('Item quantity updated', [
-                'user_id'    => $userId,
+                'user_id' => $userId,
                 'product_id' => $productId,
-                'quantity'   => $quantity,
+                'quantity' => $quantity,
             ]);
         }
     }
@@ -193,6 +218,23 @@ class CartService
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────
+
+    /**
+     * Look up a Product by ID — from the warm cache first, DB on a cold miss.
+     */
+    private function findProduct(int $productId): ?Product
+    {
+        $cached = Cache::get(ProductService::CACHE_KEY_ALL);
+        if ($cached) {
+            $found = $cached->firstWhere('id', $productId);
+            if ($found) {
+                return $found;
+            }
+        }
+
+        // Cache is cold — fall back to a direct DB lookup
+        return Product::find($productId);
+    }
 
     private function save(int $userId, array $cart): void
     {

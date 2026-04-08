@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
-use App\Models\Category;
 use App\Models\Product;
 use App\Services\ProductService;
 use App\Services\RecentlyViewServices;
@@ -35,21 +34,30 @@ class Product2Controller extends Controller
 
     public function create(): View
     {
-        $categories = Category::orderBy('name')->get();
+        $categories = $this->service->categories();
         return view('products.create', compact('categories'));
     }
 
-    public function show(Product $product): View
+    public function show(string $slug): View
     {
+        $product = $this->service->find($slug);
+        if (!$product) {
+            abort(404);
+        }
+
         if (Auth::check()) {
             $this->recentService->record(Auth::id(), $product->id);
         }
         return view('products.show', compact('product'));
     }
 
-    public function edit(Product $product): View
+    public function edit(string $slug): View
     {
-        $categories = Category::orderBy('name')->get();
+        $product = $this->service->find($slug);
+        if (!$product) {
+            abort(404);
+        }
+        $categories = $this->service->categories();
         return view('products.edit', compact('product', 'categories'));
     }
 
@@ -62,10 +70,10 @@ class Product2Controller extends Controller
         return redirect()->route('products.index')->with('success', 'Product created.');
     }
 
-    public function update(UpdateProductRequest $request, Product $product)
+    public function update(UpdateProductRequest $request, string $slug)
     {
         $this->service->update(
-            $product,
+            $slug,
             $request->validated(),
             $request->file('image'),
         );
@@ -73,8 +81,13 @@ class Product2Controller extends Controller
         return redirect()->route('products.index')->with('success', 'Product updated.');
     }
 
-    public function destroy(Product $product)
+    public function destroy(string $slug)
     {
+        $product = $this->service->find($slug);
+        if (!$product) {
+            abort(404);
+        }
+
         $this->service->delete($product);
 
         return redirect()->route('products.index')->with('success', 'Product deleted.');

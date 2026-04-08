@@ -5,13 +5,15 @@ namespace App\Services;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\User;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;
 
 class OrderService
 {
     public function __construct(
         private CartService $cartService,
-    ) {}
+    ) {
+    }
 
     public function getOrdersForUser(User $user)
     {
@@ -22,15 +24,18 @@ class OrderService
 
     public function cartSummary(int $userId): array
     {
-        $cart = $this->cartService->get($userId);
+        // Fetch cart data once and reuse for all calculations
+        $cart       = $this->cartService->get($userId);
         $cartModels = $this->cartService->getCartModels($userId);
-        $finalAmount = $this->cartService->total($userId);
-        $totalAmount = 0.0;
+
+        // Use calcTotal() with pre-fetched data — no extra Redis/cache reads
+        $finalAmount  = $this->cartService->calcTotal($cart, $cartModels);
+        $totalAmount  = 0.0;
 
         foreach ($cart as $productId => $item) {
-            $model = $cartModels[$productId] ?? null;
+            $model         = $cartModels[$productId] ?? null;
             $originalPrice = (float) ($item['price'] ?? 0);
-            $quantity = (int) ($item['quantity'] ?? 0);
+            $quantity      = (int) ($item['quantity'] ?? 0);
 
             if ($model && $model->price) {
                 $originalPrice = (float) $model->price;
@@ -40,17 +45,21 @@ class OrderService
         }
 
         return [
-            'cart' => $cart,
-            'cartModels' => $cartModels,
-            'total_amount' => $totalAmount,
+            'cart'            => $cart,
+            'cartModels'      => $cartModels,
+            'total_amount'    => $totalAmount,
             'discount_amount' => max(0, $totalAmount - $finalAmount),
-            'final_amount' => $finalAmount,
+            'final_amount'    => $finalAmount,
         ];
     }
 
-    public function createFromCart(User $user, array $data): Order
+    /**
+     * Create an order from the current cart.
+     * Pass $summary if you have already called cartSummary() to avoid a second fetch.
+     */
+    public function createFromCart(User $user, array $data, ?array $summary = null): Order
     {
-        $summary = $this->cartSummary($user->id);
+        $summary = $summary ?? $this->cartSummary($user->id);
 
         return DB::transaction(function () use ($user, $data, $summary) {
             $order = Order::create([
@@ -85,7 +94,6 @@ class OrderService
                     'total_price' => $discountedPrice * $quantity,
                 ]);
             }
-
             $this->cartService->clear($user->id);
 
             return $order;
@@ -122,10 +130,10 @@ class OrderService
 
         $items = $order->items->map(function ($item) {
             return [
-                'description'  => $item->product?->name ?? 'Item',
-                'quantity'     => (int) $item->quantity,
-                'unit_price'   => (float) $item->unit_price,
-                'total_price'  => (float) ($item->total_price ?? ($item->quantity * $item->unit_price)),
+                'description' => $item->product?->name ?? 'Item',
+                'quantity' => (int) $item->quantity,
+                'unit_price' => (float) $item->unit_price,
+                'total_price' => (float) ($item->total_price ?? ($item->quantity * $item->unit_price)),
             ];
         })->values()->all();
 
@@ -168,7 +176,7 @@ class OrderService
     {
         $invoiceData = $this->generateInvoiceData($order);
 
-        $pdf = \Pdf::loadView('invoices.invoice', ['invoice' => $invoiceData]);
+        $pdf = Pdf::loadView('invoices.invoice', ['invoice' => $invoiceData]);
 
         return $pdf->download('invoice.pdf');
     }

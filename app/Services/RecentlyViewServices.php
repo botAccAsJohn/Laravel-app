@@ -6,6 +6,7 @@ use App\Models\Product;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redis;
+use Illuminate\Support\Facades\Cache;
 
 class RecentlyViewServices
 {
@@ -42,14 +43,26 @@ class RecentlyViewServices
             return new Collection();
         }
 
-        // Fetch products and maintain the order from the list
-        return Product::with('category')
-            ->whereIn('id', $ids)
-            ->get()
-            ->sortBy(function ($product) use ($ids) {
-                return array_search($product->id, $ids);
-            })
-            ->values();
+        // Try warm cache first (zero DB hit)
+        $cached = Cache::get('products:all');
+        if ($cached) {
+            $filtered = $cached
+                ->whereIn('id', $ids)
+                ->sortBy(fn($product) => array_search($product->id, $ids))
+                ->values();
+
+            return new Collection($filtered->all());
+        }
+
+        // Cold cache — fall back to a targeted DB query, preserve order
+        $products = Product::with('category')->whereIn('id', $ids)->get();
+
+        return new Collection(
+            $products
+                ->sortBy(fn($p) => array_search($p->id, $ids))
+                ->values()
+                ->all()
+        );
     }
 
     // ── Write ─────────────────────────────────────────────────────────────────
@@ -76,7 +89,7 @@ class RecentlyViewServices
         $this->save($userId, $ids);
 
         Log::channel('products')->debug('Product view recorded', [
-            'user_id'    => $userId,
+            'user_id' => $userId,
             'product_id' => $productId,
         ]);
     }

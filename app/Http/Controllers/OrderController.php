@@ -40,17 +40,18 @@ class OrderController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'address' => ['required', 'string', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:20'],
+            'address'        => ['required', 'string', 'max:255'],
+            'phone'          => ['nullable', 'string', 'max:20'],
             'payment_method' => ['required', 'in:card,upi,wallet,cod,emi,netbanking'],
         ]);
 
+        // Compute summary once — reuse for the empty-cart check AND for order creation
         $summary = $this->service->cartSummary(Auth::id());
         if (empty($summary['cart'])) {
             return redirect()->route('cart.index')->with('warning', 'Your cart is empty. Add products before checkout.');
         }
 
-        $order = $this->service->createFromCart(Auth::user(), $validated);
+        $order = $this->service->createFromCart(Auth::user(), $validated, $summary);
 
         return redirect()->route('orders.show', $order)->with('success', 'Order created successfully.');
     }
