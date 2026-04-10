@@ -24,10 +24,23 @@
 
         {{-- Name + Status --}}
         <h2 class="text-2xl font-bold text-gray-800 mb-2">{{ $product->name }}</h2>
-        <span class="text-sm border inline-block px-2 rounded mb-4
-            {{ $product->is_active ? 'bg-green-100 text-green-700 border-green-400' : 'bg-red-100 text-red-700 border-red-400' }}">
-            {{ $product->is_active ? 'Active' : 'Inactive' }}
-        </span>
+        <div class="flex items-center gap-2 mb-4">
+            <span class="text-xs font-bold uppercase tracking-widest border inline-block px-2.5 py-1 rounded-full
+                {{ $product->is_active ? 'bg-green-100 text-green-700 border-green-400' : 'bg-red-100 text-red-700 border-red-400' }}">
+                {{ $product->is_active ? 'Active' : 'Inactive' }}
+            </span>
+            
+            <span id="top-stock-badge" class="text-xs font-bold uppercase tracking-widest border inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-all
+                {{ $product->quantity > 0 ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-gray-100 text-gray-600 border-gray-300' }}">
+                @if($product->quantity > 0)
+                    <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
+                    {{ $product->quantity }} In Stock
+                @else
+                    <span class="w-1.5 h-1.5 rounded-full bg-gray-400"></span>
+                    Out of Stock
+                @endif
+            </span>
+        </div>
 
         {{-- Category --}}
         @if($product->category)
@@ -53,18 +66,22 @@
         </div>
 
         {{-- Add to Cart Section --}}
-        <div class="mb-8">
-            @if($product->is_active)
+        <div class="mb-8" id="product-action-section">
+            <p id="stock-indicator" class="text-sm font-bold {{ $product->quantity > 0 ? 'text-green-600' : 'text-red-600' }} mb-2 transition-all">
+                {{ $product->quantity > 0 ? "In Stock: {$product->quantity} available" : 'Out of Stock' }}
+            </p>
+
+            <div id="add-to-cart-wrapper" class="{{ $product->is_active && $product->quantity > 0 ? 'block' : 'hidden' }}">
                 <form action="{{ route('cart.add', $product->id) }}" method="POST" class="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
                     @csrf
                     <div class="flex items-center justify-between border border-gray-300 rounded-lg overflow-hidden bg-white shadow-sm w-full sm:w-auto">
                         <button type="button" 
                                 onclick="const q = document.getElementById('qty'); q.value = Math.max(1, parseInt(q.value)-1);" 
                                 class="px-4 py-3 bg-gray-50 hover:bg-gray-100 transition text-gray-600 font-bold text-xl">-</button>
-                        <input type="number" name="quantity" id="qty" value="1" min="1" 
+                        <input type="number" name="quantity" id="qty" value="1" min="1" max="{{ $product->quantity }}"
                                class="w-16 text-center border-none bg-transparent focus:ring-0 font-semibold text-lg" readonly>
                         <button type="button" 
-                                onclick="const q = document.getElementById('qty'); q.value = parseInt(q.value)+1;" 
+                                onclick="const q = document.getElementById('qty'); const max = parseInt(q.max) || 999; if(parseInt(q.value) < max) q.value = parseInt(q.value)+1;" 
                                 class="px-4 py-3 bg-gray-50 hover:bg-gray-100 transition text-gray-600 font-bold text-xl">+</button>
                     </div>
                     
@@ -80,12 +97,16 @@
                     <svg class="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
                     Secure transaction • Eligible for FREE Shipping
                 </p>
-            @else
+            </div>
+
+            <div id="out-of-stock-wrapper" class="{{ !$product->is_active || $product->quantity <= 0 ? 'block' : 'hidden' }}">
                 <div class="p-4 bg-red-50 text-red-700 border border-red-200 rounded-lg flex items-center gap-3 shadow-sm">
                     <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/></svg>
-                    <span class="font-semibold px-4">This product is currently out of stock or unavailable.</span>
+                    <span id="unavailable-text" class="font-semibold px-4">
+                        {{ $product->is_active ? 'This product is currently out of stock.' : 'This product is currently unavailable.' }}
+                    </span>
                 </div>
-            @endif
+            </div>
         </div>
 
         {{-- Tags --}}
@@ -118,3 +139,90 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script type="module">
+    document.addEventListener('DOMContentLoaded', function () {
+        let echoRetries = 0;
+        
+        function initStockEcho() {
+            if (window.Echo) {
+                console.log('Echo initialized, subscribing to: product.{{ $product->id }}');
+                window.Echo.channel('product.{{ $product->id }}')
+                    .listen('.stock.changed', function (e) {
+                        const newStock = e.new_stock;
+                        console.log('Stock Update Received via Echo:', newStock, e);
+                        
+                        const indicator = document.getElementById('stock-indicator');
+                        const topBadge = document.getElementById('top-stock-badge');
+                        
+                        const qtyInput = document.getElementById('qty');
+                        const cartWrapper = document.getElementById('add-to-cart-wrapper');
+                        const outOfStockWrapper = document.getElementById('out-of-stock-wrapper');
+                        const outOfStockText = document.getElementById('unavailable-text');
+                        
+                        if (indicator) {
+                            if (newStock > 0) {
+                                indicator.textContent = `In Stock: ${newStock} available`;
+                                indicator.className = 'text-sm font-bold text-green-600 mb-2 transition-all';
+                                
+                                if (topBadge) {
+                                    topBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span> ${newStock} In Stock`;
+                                    topBadge.className = 'text-xs font-bold uppercase tracking-widest border inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-all bg-indigo-50 text-indigo-700 border-indigo-200';
+                                }
+                                
+                                if (qtyInput) {
+                                    qtyInput.max = newStock;
+                                    if (parseInt(qtyInput.value) > newStock) {
+                                        qtyInput.value = newStock;
+                                    }
+                                }
+                                
+                                @if($product->is_active)
+                                    if (cartWrapper) {
+                                        cartWrapper.classList.remove('hidden');
+                                        cartWrapper.classList.add('block');
+                                    }
+                                    if (outOfStockWrapper) {
+                                        outOfStockWrapper.classList.remove('block');
+                                        outOfStockWrapper.classList.add('hidden');
+                                    }
+                                @endif
+                            } else {
+                                indicator.textContent = 'Out of Stock';
+                                indicator.className = 'text-sm font-bold text-red-600 mb-2 transition-all';
+                                
+                                if (topBadge) {
+                                    topBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-gray-400"></span> Out of Stock`;
+                                    topBadge.className = 'text-xs font-bold uppercase tracking-widest border inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-all bg-gray-100 text-gray-600 border-gray-300';
+                                }
+                                
+                                if (outOfStockText) {
+                                    outOfStockText.textContent = 'This product is currently out of stock.';
+                                }
+                                
+                                if (cartWrapper) {
+                                    cartWrapper.classList.remove('block');
+                                    cartWrapper.classList.add('hidden');
+                                }
+                                if (outOfStockWrapper) {
+                                    outOfStockWrapper.classList.remove('hidden');
+                                    outOfStockWrapper.classList.add('block');
+                                }
+                            }
+                            
+                            indicator.style.opacity = '0.5';
+                            setTimeout(() => indicator.style.opacity = '1', 300);
+                        }
+                    });
+            } else if (echoRetries < 10) {
+                echoRetries++;
+                console.log('Echo not found, retrying... (' + echoRetries + '/10)');
+                setTimeout(initStockEcho, 500);
+            }
+        }
+
+        initStockEcho();
+    });
+</script>
+@endpush

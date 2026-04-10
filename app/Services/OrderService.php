@@ -7,13 +7,14 @@ use App\Models\OrderItem;
 use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 
 class OrderService
 {
     public function __construct(
         private CartService $cartService,
-    ) {
-    }
+    ) {}
 
     public function getOrdersForUser(User $user)
     {
@@ -80,7 +81,25 @@ class OrderService
                 $quantity = (int) ($item['quantity'] ?? 0);
 
                 if ($model && $model->price) {
+                    if ($quantity > $model->quantity) {
+                        throw new \App\Exceptions\ProductOutOfStockException(
+                            productName: $model->name,
+                            productId: $model->id,
+                            requestedQty: $quantity,
+                            availableQty: $model->quantity
+                        );
+                    }
+
                     $originalPrice = (float) $model->price;
+
+                    // Deduct stock and broadcast real-time logic
+                    $model->quantity = $model->quantity - $quantity;
+                    $model->save();
+
+                    broadcast(new \App\Events\ProductStockChanged($model->id, $model->quantity));
+
+                    // Clear the cache for this product since quantity changed
+                    \Illuminate\Support\Facades\Cache::forget(\App\Models\Product::CACHE_KEY_SINGLE . $model->slug);
                 }
 
                 $discountedPrice = (float) ($item['price'] ?? 0);
@@ -96,6 +115,12 @@ class OrderService
             }
             $this->cartService->clear($user->id);
 
+            Log::channel('orders')->info("Order #{$order->id} created for User #{$user->id}", [
+                'total' => $order->total_amount,
+                'items_count' => count($summary['cart']),
+                'address' => $order->address
+            ]);
+
             return $order;
         });
     }
@@ -104,7 +129,14 @@ class OrderService
     {
         return DB::transaction(function () use ($order, $data) {
             if (isset($data['status'])) {
+                $oldStatus = $order->status;
                 $order->update(['status' => $data['status']]);
+
+                Log::channel('orders')->info("Order #{$order->id} status updated", [
+                    'old_status' => $oldStatus,
+                    'new_status' => $data['status'],
+                    'updated_by' => Auth::id()
+                ]);
             }
 
             return $order->refresh();
@@ -115,13 +147,24 @@ class OrderService
     {
         return DB::transaction(function () use ($order) {
             $order->update(['status' => 'cancelled']);
+
+            Log::channel('orders')->warning("Order #{$order->id} was cancelled", [
+                'user_id' => Auth::id(),
+                'order_user_id' => $order->user_id
+            ]);
+
             return $order->refresh();
         });
     }
 
     public function delete(Order $order): void
     {
+        $orderId = $order->id;
         $order->delete();
+
+        Log::channel('orders')->alert("Order #{$orderId} was deleted from database", [
+            'deleted_by' => Auth::id()
+        ]);
     }
 
     public function generateInvoiceData(Order $order): array

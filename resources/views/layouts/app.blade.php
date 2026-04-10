@@ -10,12 +10,14 @@
 
     <!-- Fonts -->
     <!-- <link rel="icon" href="/favicon.ico"> -->
-    <link rel="preload" href="/favicon.ico" as="image">
+    <!-- <link rel="preload" href="/favicon.ico" as="image"> -->
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
 
     <!-- Scripts -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <!-- Toastr CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
     @stack('styles')
     @stack('scripts')
 </head>
@@ -26,19 +28,38 @@
 
         <!-- Page Heading -->
         @isset($header)
-            <header class="bg-white shadow">
-                <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-                    {{ $header }}
-                </div>
-            </header>
+        <header class="bg-white shadow">
+            <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+                {{ $header }}
+            </div>
+        </header>
         @endisset
 
-        <!-- Page Content -->
         <main>
             <x-flash-messages />
             @yield('content')
+            {{ $slot ?? '' }}
         </main>
     </div>
+
+    <x-toast />
+
+    @auth
+    <script type="module">
+        document.addEventListener('DOMContentLoaded', function() {
+            let presenceRetries = 0;
+            function initPresence() {
+                if (window.Echo) {
+                    window.Echo.join('store.browsing');
+                } else if (presenceRetries < 5) {
+                    presenceRetries++;
+                    setTimeout(initPresence, 1000);
+                }
+            }
+            initPresence();
+        });
+    </script>
+    @endauth
 </body>
 
 </html>

@@ -49,7 +49,7 @@ class CartService
         }
 
         // Try warm cache first
-        $cached = Cache::get(ProductService::CACHE_KEY_ALL);
+        $cached = Cache::get(Product::CACHE_KEY_ALL);
         if ($cached) {
             return new Collection(
                 $cached->filter(fn($p) => in_array($p->id, $ids))->keyBy('id')
@@ -115,9 +115,21 @@ class CartService
         }
 
         $cart = $this->get($userId);
+        $currentQuantityInCart = isset($cart[$productId]) ? $cart[$productId]['quantity'] : 0;
+        $totalRequestedQuantity = $currentQuantityInCart + $quantity;
+
+        // Check if the total requested quantity exceeds available stock
+        if ($totalRequestedQuantity > $product->quantity) {
+            throw new ProductOutOfStockException(
+                productName: $product->name,
+                productId: $product->id,
+                requestedQty: $totalRequestedQuantity,
+                availableQty: $product->quantity,
+            );
+        }
 
         if (isset($cart[$productId])) {
-            $cart[$productId]['quantity'] += $quantity;
+            $cart[$productId]['quantity'] = $totalRequestedQuantity;
         } else {
             $cart[$productId] = [
                 'id' => $product->id,
@@ -194,6 +206,17 @@ class CartService
             return;
         }
 
+        $product = $this->findProduct($productId);
+
+        if (!$product || $quantity > $product->quantity) {
+            throw new ProductOutOfStockException(
+                productName: $product ? $product->name : "Product #{$productId}",
+                productId: $productId,
+                requestedQty: $quantity,
+                availableQty: $product ? $product->quantity : 0,
+            );
+        }
+
         $cart = $this->get($userId);
         if (isset($cart[$productId])) {
             $cart[$productId]['quantity'] = $quantity;
@@ -224,7 +247,7 @@ class CartService
      */
     private function findProduct(int $productId): ?Product
     {
-        $cached = Cache::get(ProductService::CACHE_KEY_ALL);
+        $cached = Cache::get(Product::CACHE_KEY_ALL);
         if ($cached) {
             $found = $cached->firstWhere('id', $productId);
             if ($found) {

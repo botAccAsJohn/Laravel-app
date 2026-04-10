@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Redis;
+use Illuminate\Support\Facades\Log;
 
 class CacheMonitorService
 {
@@ -220,15 +221,47 @@ class CacheMonitorService
     private function redisInfo(): array
     {
         try {
-            $info = Redis::info();
+            $raw = Redis::info();
+            $info = [];
+
+            // Flatten the array if it's nested (common with phpredis)
+            foreach ($raw as $key => $value) {
+                if (is_array($value)) {
+                    foreach ($value as $subKey => $subValue) {
+                        $info[$subKey] = $subValue;
+                    }
+                    // Keep the keyspace section for special handling
+                    if ($key === 'Keyspace') {
+                        $info['__keyspace'] = $value;
+                    }
+                } else {
+                    $info[$key] = $value;
+                }
+            }
+
+            // Calculate total keys across all DBs
+            $totalKeys = 0;
+            if (isset($info['__keyspace'])) {
+                foreach ($info['__keyspace'] as $dbStats) {
+                    if (is_array($dbStats) && isset($dbStats['keys'])) {
+                        $totalKeys += (int) $dbStats['keys'];
+                    } elseif (is_string($dbStats) && preg_match('/keys=(\d+)/', $dbStats, $matches)) {
+                        $totalKeys += (int) $matches[1];
+                    }
+                }
+            } else {
+                // Fallback for flat structure
+                foreach ($info as $key => $value) {
+                    if (str_starts_with($key, 'db') && preg_match('/keys=(\d+)/', (string)$value, $matches)) {
+                        $totalKeys += (int) $matches[1];
+                    }
+                }
+            }
 
             return [
                 'memory_used'       => $this->formatBytes((int) ($info['used_memory'] ?? 0)),
                 'memory_peak'       => $this->formatBytes((int) ($info['used_memory_peak'] ?? 0)),
-                'keys'              => array_sum(array_map(
-                    fn($db) => preg_match('/keys=(\d+)/', $db, $m) ? (int) $m[1] : 0,
-                    array_filter($info, fn($v, $k) => str_starts_with((string)$k, 'db'), ARRAY_FILTER_USE_BOTH)
-                )) ?: ($info['db0'] ? (preg_match('/keys=(\d+)/', $info['db0'], $m) ? (int) $m[1] : '—') : '—'),
+                'keys'              => $totalKeys ?: '—',
                 'uptime_days'       => $info['uptime_in_days'] ?? '—',
                 'connected_clients' => $info['connected_clients'] ?? '—',
                 'hits'              => $info['keyspace_hits'] ?? 0,
@@ -239,6 +272,7 @@ class CacheMonitorService
                 'expired_keys'      => $info['expired_keys'] ?? 0,
             ];
         } catch (\Exception $e) {
+            Log::error("Redis Info Error: " . $e->getMessage());
             return [];
         }
     }

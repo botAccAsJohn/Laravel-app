@@ -13,54 +13,6 @@ use Illuminate\Support\Str;
 
 class ProductService
 {
-    const TTL_ALL_PRODUCTS = 60 * 60; // 1 hour – shared TTL for both cache layers
-    const CACHE_KEY_ALL = 'products:all';
-    const CACHE_KEY_COUNT = 'products:count';
-    const CACHE_KEY_SINGLE = 'products:single:'; // append slug → "products:single:my-product"
-
-    // ── Read ─────────────────────────────────────────────────────────────────
-
-    /**
-     * Return all products.
-     * Stored in its own "products:all" cache key – completely independent
-     * from the per-slug individual cache.
-     */
-    public function all()
-    {
-        return Cache::remember(self::CACHE_KEY_ALL, self::TTL_ALL_PRODUCTS, function () {
-            return Product::with('category')->latest()->get();
-        });
-    }
-
-    public function count(): int
-    {
-        return Cache::remember(self::CACHE_KEY_COUNT, self::TTL_ALL_PRODUCTS, function () {
-            return Product::count();
-        });
-    }
-
-    public function find(string $slug): ?Product
-    {
-        return Cache::remember(
-            self::CACHE_KEY_SINGLE . $slug,
-            self::TTL_ALL_PRODUCTS,
-            fn() => Product::with('category')->where('slug', $slug)->first()
-        );
-    }
-
-    /**
-     * Return all categories ordered by name.
-     * Cached forever — busted only when a category changes (rare).
-     */
-    public function categories()
-    {
-        return Cache::rememberForever('categories:all', function () {
-            return Category::orderBy('name')->get();
-        });
-    }
-
-    // ── Write ─────────────────────────────────────────────────────────────────
-
     public function create(array $validated, ?UploadedFile $imageFile = null): Product
     {
         if (isset($validated['price']) && (float) $validated['price'] <= 0) {
@@ -94,13 +46,8 @@ class ProductService
         return $product;
     }
 
-    public function update(string $slug, array $validated, ?UploadedFile $imageFile = null): bool
+    public function update(Product $product, array $validated, ?UploadedFile $imageFile = null): bool
     {
-        $product = $this->find($slug);
-        if (!$product) {
-            abort(404);
-        }
-
         if (isset($validated['price']) && (float) $validated['price'] <= 0) {
             throw new InvalidPriceException(
                 (float) $validated['price'],
@@ -128,21 +75,27 @@ class ProductService
         if (!isset($validated['slug']) || empty($validated['slug'])) {
             $validated['slug'] = $this->generateSlug($validated['name'] ?? $product->name, $product->id);
         }
-        if (isset($validated['slug']) && $validated['slug'] !== $slug) {
+        if (isset($validated['slug']) && $validated['slug'] !== $product->slug) {
             $newSlug = $validated['slug'];
         }
 
+        $oldQuantity = $product->quantity;
         $updated = $product->update($validated);
+
+        // Broadcast if quantity changed
+        if ($updated && isset($validated['quantity']) && (int)$validated['quantity'] !== (int)$oldQuantity) {
+            broadcast(new \App\Events\ProductStockChanged($product->id, $product->quantity));
+        }
 
         // Bust the "all products" list (order/data changed).
         $this->forgetListCache();
 
         // Bust the individual cache for the OLD slug.
-        Cache::forget(self::CACHE_KEY_SINGLE . $slug);
+        Cache::forget(Product::CACHE_KEY_SINGLE . $product->slug);
 
         // If the slug changed, also prime/bust the new slug's individual cache.
         if ($newSlug) {
-            Cache::forget(self::CACHE_KEY_SINGLE . $newSlug);
+            Cache::forget(Product::CACHE_KEY_SINGLE . $newSlug);
         }
 
         Log::channel('products')->info('Product updated', [
@@ -156,10 +109,6 @@ class ProductService
 
     public function delete(Product $product): bool
     {
-        $productId = $product->id;
-        $productName = $product->name;
-        $slug = $product->slug; // ← bug-fix: was undefined in original
-
         if ($product->image_path) {
             Storage::disk('public')->delete($product->image_path);
         }
@@ -168,11 +117,11 @@ class ProductService
 
         // Bust both the list cache and this product's individual cache entry.
         $this->forgetListCache();
-        Cache::forget(self::CACHE_KEY_SINGLE . $slug);
+        Cache::forget(Product::CACHE_KEY_SINGLE . $product->slug);
 
         Log::channel('products')->info('Product deleted', [
-            'product_id' => $productId,
-            'product_name' => $productName,
+            'product_id' => $product->id,
+            'product_name' => $product->name,
         ]);
 
         return $deleted;
@@ -186,8 +135,8 @@ class ProductService
      */
     private function forgetListCache(): void
     {
-        Cache::forget(self::CACHE_KEY_ALL);
-        Cache::forget(self::CACHE_KEY_COUNT);
+        Cache::forget(Product::CACHE_KEY_ALL);
+        Cache::forget(Product::CACHE_KEY_COUNT);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

@@ -5,6 +5,10 @@ use App\Http\Controllers\Product2Controller;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CacheMonitorController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\RecentlyViewController;
+use App\Services\CacheMonitorService;
+use App\Events\OrderPlaced;
+use App\Models\Order;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Cache;
@@ -13,11 +17,35 @@ use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Auth;
 
 Route::get('/', function () {
-    event(new MyEvent('hello world'));
+    return view('welcome');
 });
 
-Route::get('/dashboard', function () {
-    return view('dashboard');
+Route::get('/test/broadcast-order', function () {
+    // if (Auth::user()?->role !== 'admin') {
+    //     abort(403);
+    // }
+    // Create a dummy order for testing
+    $order = Order::create([
+        'user_id' => 1,
+        'status' => 'pending',
+        'payment_method' => 'cod',
+        'address' => '123, Demo Street, Surat, Gujarat, India',
+        'phone' => '9876543210',
+        'total_amount' => 1500.00,
+        'discount_amount' => 200.00,
+        'final_amount' => 1300.00,
+        'placed_at' => now(),
+    ]);
+    broadcast(new \App\Events\OrderPlaced($order));
+    return "Dummy Order Placed and Broadcasted as ID: " . $order->id;
+});
+
+Route::get('/dashboard', function (CacheMonitorService $monitor) {
+    if (Auth::user()->role !== 'admin') {
+        return redirect()->route('products.index');
+    }
+    $stats = $monitor->stats();
+    return view('dashboard', compact('stats'));
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
@@ -58,7 +86,7 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('products', Product2Controller::class)->except(['index', 'show']);
 
         // Cache Monitor (admin only)
-        Route::get('/admin/cache',       [CacheMonitorController::class, 'index'])->name('admin.cache.index');
+        Route::get('/admin/cache', [CacheMonitorController::class, 'index'])->name('admin.cache.index');
         Route::post('/admin/cache/clear', [CacheMonitorController::class, 'clear'])->name('admin.cache.clear');
     });
     Route::resource('products', Product2Controller::class)->only(['index', 'show']);

@@ -51,12 +51,21 @@
         </div>
 
         {{-- Discount Price --}}
-        <div>
-            <label class="block text-gray-700 font-bold mb-1">Discount Price (₹)
-                <span class="text-gray-400 font-normal text-sm">— optional</span>
-            </label>
-            <input type="number" step="0.01" name="discount_price" value="{{ old('discount_price') }}" min="0.01"
-                   class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-gray-700 font-bold mb-1">Discount Price (₹)
+                    <span class="text-gray-400 font-normal text-sm">— optional</span>
+                </label>
+                <input type="number" step="0.01" name="discount_price" value="{{ old('discount_price') }}" min="0.01"
+                       class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+
+            {{-- Quantity (Stock) --}}
+            <div>
+                <label class="block text-gray-700 font-bold mb-1">Stock Quantity <span class="text-red-500">*</span></label>
+                <input type="number" name="quantity" value="{{ old('quantity', 0) }}" min="0" step="1"
+                       class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+            </div>
         </div>
 
         {{-- Category --}}

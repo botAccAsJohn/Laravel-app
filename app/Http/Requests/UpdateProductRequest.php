@@ -38,6 +38,7 @@ class UpdateProductRequest extends FormRequest
                 \Illuminate\Validation\Rule::unique('products', 'slug')->ignore($product)
             ],
             'is_active' => ['required', 'boolean'],
+            'quantity' => ['required', 'integer', 'min:0'],
         ];
     }
 }

@@ -31,6 +31,7 @@ class StoreProductRequest extends FormRequest
             'image'          => ['nullable', 'image', 'mimes:jpg,jpeg,png', 'max:2048'],
             'slug'           => ['nullable', 'string', 'max:255', 'unique:products,slug'],
             'is_active'      => ['required', 'boolean'],
+            'quantity'       => ['required', 'integer', 'min:0'],
         ];
     }
 }

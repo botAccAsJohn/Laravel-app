@@ -5,15 +5,13 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
 use App\Models\Product;
+use App\Models\Category;
 use App\Services\ProductService;
 use App\Services\RecentlyViewServices;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
-
-
 use App\Exports\ProductsExport;
 use Maatwebsite\Excel\Facades\Excel;
-
 
 class Product2Controller extends Controller
 {
@@ -24,40 +22,31 @@ class Product2Controller extends Controller
 
     public function index(): View
     {
-        $products = $this->service->all();
+        $products = Product::getAllProductsFromCache();
         return view('products.index', [
             'products' => $products,
-            'total_products' => count($products),
+            'total_products' => Product::countFromCache(),
             'page_title' => 'All Products',
         ]);
     }
 
     public function create(): View
     {
-        $categories = $this->service->categories();
+        $categories = Category::getAllCategoriesFromCache();
         return view('products.create', compact('categories'));
     }
 
-    public function show(string $slug): View
+    public function show(Product $product): View
     {
-        $product = $this->service->find($slug);
-        if (!$product) {
-            abort(404);
-        }
-
         if (Auth::check()) {
             $this->recentService->record(Auth::id(), $product->id);
         }
         return view('products.show', compact('product'));
     }
 
-    public function edit(string $slug): View
+    public function edit(Product $product): View
     {
-        $product = $this->service->find($slug);
-        if (!$product) {
-            abort(404);
-        }
-        $categories = $this->service->categories();
+        $categories = Category::getAllCategoriesFromCache();
         return view('products.edit', compact('product', 'categories'));
     }
 
@@ -70,10 +59,10 @@ class Product2Controller extends Controller
         return redirect()->route('products.index')->with('success', 'Product created.');
     }
 
-    public function update(UpdateProductRequest $request, string $slug)
+    public function update(UpdateProductRequest $request, Product $product)
     {
         $this->service->update(
-            $slug,
+            $product,
             $request->validated(),
             $request->file('image'),
         );
@@ -81,15 +70,9 @@ class Product2Controller extends Controller
         return redirect()->route('products.index')->with('success', 'Product updated.');
     }
 
-    public function destroy(string $slug)
+    public function destroy(Product $product)
     {
-        $product = $this->service->find($slug);
-        if (!$product) {
-            abort(404);
-        }
-
         $this->service->delete($product);
-
         return redirect()->route('products.index')->with('success', 'Product deleted.');
     }
 
