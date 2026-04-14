@@ -41,58 +41,36 @@ class CacheMonitorService
     }
 
     /**
-     * Calculate cache hit rate from today's products log.
-     * Counts "remember" log calls (cache set) vs total find calls.
+     * Calculate cache hit rate from today's Redis cache event metrics.
      */
     public function hitRate(): array
     {
-        $logPath = storage_path('logs/products/products-' . date('Y-m-d') . '.log');
+        try {
+            $date = date('Y-m-d');
+            $hits = (int) Redis::get("cache_metrics:hits:{$date}");
+            $misses = (int) Redis::get("cache_metrics:misses:{$date}");
 
-        $hits   = 0;
-        $misses = 0;
+            $total = $hits + $misses;
+            $rate  = $total > 0 ? round(($hits / $total) * 100, 1) : 0;
+            
+            $recentRaw = Redis::lrange("cache_metrics:recent", 0, 9); // top 10
+            $recent = [];
+            foreach ($recentRaw as $raw) {
+                $recent[] = json_decode($raw, true);
+            }
 
-        if (!file_exists($logPath)) {
             return [
-                'hits'    => 0,
-                'misses'  => 0,
-                'rate'    => 0,
-                'total'   => 0,
-                'no_log'  => true,
+                'hits'   => $hits,
+                'misses' => $misses,
+                'rate'   => $rate,
+                'total'  => $total,
+                'recent' => $recent,
+            ];
+        } catch (\Exception $e) {
+            return [
+                'hits' => 0, 'misses' => 0, 'rate' => 0, 'total' => 0, 'recent' => []
             ];
         }
-
-        $handle = fopen($logPath, 'r');
-        while (!feof($handle)) {
-            $line = fgets($handle);
-            if (!$line) continue;
-
-            // We parse our structured log lines to count hits vs misses.
-            // "Product created" / "Product updated" / "Product deleted" = write ops (skip)
-            // "Product view recorded" = cache hit (product found in memory/cache)
-            // Any line about "Cold cache" pattern we check from DB interactions would be a miss.
-            // For a practical approach: count "Product view recorded" as hit indicators,
-            // and count "Product created/updated/deleted" as cache invalidations (misses that follow).
-            if (stripos($line, 'Product view recorded') !== false) {
-                $hits++;
-            } elseif (
-                stripos($line, 'Product created') !== false ||
-                stripos($line, 'Product updated') !== false ||
-                stripos($line, 'Product deleted') !== false
-            ) {
-                $misses++;
-            }
-        }
-        fclose($handle);
-
-        $total = $hits + $misses;
-        $rate  = $total > 0 ? round(($hits / $total) * 100, 1) : 0;
-
-        return [
-            'hits'   => $hits,
-            'misses' => $misses,
-            'rate'   => $rate,
-            'total'  => $total,
-        ];
     }
 
     /**

@@ -9,6 +9,7 @@ use App\Models\Category;
 use App\Services\ProductService;
 use App\Services\RecentlyViewServices;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 use App\Exports\ProductsExport;
 use Maatwebsite\Excel\Facades\Excel;
@@ -20,14 +21,25 @@ class Product2Controller extends Controller
         private RecentlyViewServices $recentService
     ) {}
 
-    public function index(): View
+    public function index(Request $request): View
     {
-        $products = Product::getAllProductsFromCache();
+        $allProducts = Product::getAllProductsFromCache();
+        $categories = Category::getAllCategoriesFromCache();
+
+        $result = $this->service->filterProducts($allProducts, $request);
+        $productsList = $result['products'];
+        $totalFound = $productsList->count();
+
         return view('products.index', [
-            'products' => $products,
-            'total_products' => Product::countFromCache(),
+            'products' => $productsList->paginate(12),
+            'total_products' => $totalFound,
+            'all_products_count' => Product::countFromCache(),
             'page_title' => 'All Products',
+            'categories' => $categories,
+            'filters' => $result['filters'],
+            'priceRange' => $result['priceRange'],
         ]);
+
     }
 
     public function create(): View

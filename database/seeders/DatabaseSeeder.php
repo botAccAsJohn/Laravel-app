@@ -47,6 +47,7 @@ class DatabaseSeeder extends Seeder
             'discount_price' => 849.99,
             'tags'           => ['electronics', 'featured', 'sale'],
             'slug'           => 'test-laptop',
+            'quantity'       => 10,
             'is_active'      => true,
             'category_id'    => Category::where('name', 'Electronics')->value('id'),
         ]);

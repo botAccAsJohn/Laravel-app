@@ -4,12 +4,22 @@
             <h2 class="font-bold text-2xl text-gray-800 leading-tight">
                 {{ __('Admin Command Center') }}
             </h2>
-            <div class="flex items-center gap-2">
-                <span class="relative flex h-3 w-3">
-                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-                </span>
-                <span class="text-xs font-semibold uppercase tracking-wider text-emerald-600">Live System Active</span>
+            <div class="flex items-center gap-6">
+                {{-- Sales Analytics Link --}}
+                <a href="{{ route('admin.analytics.index') }}" class="flex items-center gap-2 group px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl font-bold text-xs transition-all border border-indigo-100 shadow-sm">
+                    <svg class="w-4 h-4 text-indigo-500 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    Sales Analytics
+                </a>
+
+                <div class="flex items-center gap-2">
+                    <span class="relative flex h-3 w-3">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                    </span>
+                    <span class="text-xs font-semibold uppercase tracking-wider text-emerald-600">Live System Active</span>
+                </div>
             </div>
         </div>
     </x-slot>
@@ -55,7 +65,43 @@
                                 </div>
                             </div>
 
-                            <div class="grid grid-cols-2 gap-4">
+                            <div class="flex justify-between w-full px-2 text-sm">
+                                <div class="text-center">
+                                    <p class="font-black text-indigo-900">{{ $stats['hit_rate']['hits'] ?? 0 }}</p>
+                                    <p class="text-[9px] uppercase font-bold text-indigo-400 tracking-widest">Hits</p>
+                                </div>
+                                <div class="text-center">
+                                    <p class="font-black text-gray-900">{{ $stats['hit_rate']['total'] ?? 0 }}</p>
+                                    <p class="text-[9px] uppercase font-bold text-gray-400 tracking-widest">Total</p>
+                                </div>
+                                <div class="text-center">
+                                    <p class="font-black text-rose-900">{{ $stats['hit_rate']['misses'] ?? 0 }}</p>
+                                    <p class="text-[9px] uppercase font-bold text-rose-400 tracking-widest">Misses</p>
+                                </div>
+                            </div>
+
+                            @if(!empty($stats['hit_rate']['recent']))
+                            <div class="pt-4 border-t border-gray-100 space-y-2">
+                                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Recent Cache Events</p>
+                                <div class="space-y-1.5 max-h-[120px] overflow-y-auto pr-1">
+                                    @foreach($stats['hit_rate']['recent'] as $event)
+                                    <div class="flex justify-between items-center text-xs p-2 bg-gray-50/80 rounded-lg border border-gray-100">
+                                        <div class="truncate mr-2">
+                                            <span class="font-mono text-[10px] text-gray-600 truncate block">{{ $event['key'] }}</span>
+                                            <span class="text-[8px] text-gray-400">{{ \Carbon\Carbon::parse($event['time'])->diffForHumans(null, true, true) }} ago</span>
+                                        </div>
+                                        @if($event['type'] === 'hit')
+                                            <span class="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-bold uppercase text-[8px] tracking-wider shrink-0">Hit</span>
+                                        @else
+                                            <span class="px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 font-bold uppercase text-[8px] tracking-wider shrink-0">Miss</span>
+                                        @endif
+                                    </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                            @endif
+
+                            <div class="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100">
                                 <div class="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100/50">
                                     <p class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Memory</p>
                                     <p class="text-lg font-bold text-indigo-900">{{ $stats['memory_used'] ?? '—' }}</p>
@@ -101,6 +147,28 @@
                     </div>
 
 
+                    {{-- SALES ANALYTICS QUICK LINK --}}
+                    <div class="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-2xl shadow-lg border border-indigo-500 overflow-hidden group">
+                        <div class="p-6">
+                            <div class="flex items-center gap-4 mb-4">
+                                <div class="h-10 w-10 bg-white/20 rounded-xl flex items-center justify-center text-white backdrop-blur-sm">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-white text-lg">Sales Intelligence</h3>
+                                    <p class="text-indigo-100 text-xs font-medium">Monthly revenue & top sellers</p>
+                                </div>
+                            </div>
+                            <a href="{{ route('admin.analytics.index') }}" class="w-full flex items-center justify-center gap-2 px-4 py-3 bg-white text-indigo-700 rounded-xl font-bold text-sm transition-all hover:bg-indigo-50 shadow-md">
+                                View Full Reports
+                                <svg class="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                                </svg>
+                            </a>
+                        </div>
+                    </div>
                 </div>
 
                 {{-- MAIN PANEL: LIVE ORDER FEED & KEYSPACE --}}

@@ -27,6 +27,53 @@ class OrderController extends Controller
         ]);
     }
 
+    /**
+     * Display customer order insights and statistics.
+     * 
+     * Uses Collection methods: count(), sum(), avg(), reject(), flatMap(), groupBy(), sortByDesc(), take()
+     */
+    public function analytics(): View
+    {
+        $user = Auth::user();
+        // Fetch all orders for the user with items
+        $orders = Order::with('items.product')
+            ->where('user_id', $user->id)
+            ->get();
+
+        // 1. General Metrics (Collection: reject, sum, avg)
+        $processedOrders = $orders->reject(fn($o) => in_array($o->status, ['cancelled', 'pending']));
+        
+        $totalOrders = $orders->count();
+        $totalSpent = (float) $processedOrders->sum('final_amount');
+        $averageOrderValue = (float) $processedOrders->avg('final_amount');
+
+        // 2. Favorite Products (Collection: flatMap, groupBy, map, sortByDesc, take)
+        $favoriteProducts = $orders->flatMap(fn($order) => $order->items)
+            ->groupBy('product_id')
+            ->map(function ($items) {
+                $item = $items->first();
+                return [
+                    'name' => $item->product->name ?? 'Unknown',
+                    'count' => (int) $items->sum('quantity'),
+                    'image' => $item->product->image_path ?? null,
+                ];
+            })
+            ->sortByDesc('count')
+            ->take(3);
+
+        // 3. Status Breakdown (Collection: groupBy, map)
+        $statusBreakdown = $orders->groupBy('status')
+            ->map(fn($group) => $group->count());
+
+        return view('orders.analytics', compact(
+            'totalOrders',
+            'totalSpent',
+            'averageOrderValue',
+            'favoriteProducts',
+            'statusBreakdown'
+        ));
+    }
+
     public function create(): View|RedirectResponse
     {
         $summary = $this->service->cartSummary(Auth::id());
@@ -64,8 +111,6 @@ class OrderController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'address' => ['required', 'string', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:20'],
             'address'        => ['required', 'string', 'max:255'],
             'phone'          => ['nullable', 'string', 'max:20'],
             'payment_method' => ['required', 'in:card,upi,wallet,cod,emi,netbanking'],
@@ -77,7 +122,6 @@ class OrderController extends Controller
             return redirect()->route('cart.index')->with('warning', 'Your cart is empty. Add products before checkout.');
         }
 
-        $order = $this->service->createFromCart(Auth::user(), $validated);
         $order = $this->service->createFromCart(Auth::user(), $validated, $summary);
 
         return redirect()->route('orders.show', $order)->with('success', 'Order created successfully.');

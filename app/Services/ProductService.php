@@ -186,4 +186,60 @@ class ProductService
         fclose($file);
         return $logs;
     }
+
+    public function filterProducts($allProducts, $request)
+    {
+        $filters = [
+            'categories' => (array) $request->input('categories', []),
+            'min_price' => $request->filled('min_price') ? (float) $request->input('min_price') : null,
+            'max_price' => $request->filled('max_price') ? (float) $request->input('max_price') : null,
+            'in_stock' => $request->boolean('in_stock'),
+            'on_sale' => $request->boolean('on_sale'),
+            'sort' => $request->input('sort', 'newest'),
+        ];
+
+        $priceRange = [
+            'min' => (float) $allProducts->map(fn($p) => (float) ($p->discount_price ?? $p->price))->min(),
+            'max' => (float) $allProducts->map(fn($p) => (float) ($p->discount_price ?? $p->price))->max(),
+        ];
+
+        $products = $allProducts
+            // Category Filter (Multiple) - using filter()
+            ->when(!empty($filters['categories']), function ($collection) use ($filters) {
+                return $collection->filter(fn($p) => in_array($p->category_id, $filters['categories']));
+            })
+            // Price Filters - using filter()
+            ->when($filters['min_price'] !== null, function ($collection) use ($filters) {
+                return $collection->filter(fn($p) => (float) ($p->discount_price ?? $p->price) >= $filters['min_price']);
+            })
+            ->when($filters['max_price'] !== null, function ($collection) use ($filters) {
+                return $collection->filter(fn($p) => (float) ($p->discount_price ?? $p->price) <= $filters['max_price']);
+            })
+            // Stock Filter - using where() + filter()
+            ->when($filters['in_stock'], function ($collection) {
+                return $collection->where('is_active', true)->filter(fn($p) => $p->quantity > 0);
+            })
+            // Sale Filter - using filter()
+            ->when($filters['on_sale'], function ($collection) {
+                return $collection->filter(fn($p) => $p->discount_price > 0);
+            });
+
+        // Sorting - using sortBy() and sortByDesc()
+        $products = match ($filters['sort']) {
+            'price_low_high' => $products->sortBy(fn($p) => (float) ($p->discount_price ?? $p->price)),
+            'price_high_low' => $products->sortByDesc(fn($p) => (float) ($p->discount_price ?? $p->price)),
+            'popularity' => $products->sortByDesc('sales_count'),
+            'newest' => $products->sortByDesc('created_at'),
+            default => $products->sortByDesc('created_at'),
+        };
+
+
+        return [
+            'products' => $products->values(),
+            'filters' => $filters,
+            'priceRange' => $priceRange,
+        ];
+    }
+
+
 }

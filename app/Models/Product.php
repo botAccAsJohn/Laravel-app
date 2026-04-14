@@ -8,9 +8,23 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Log;
 
+use App\Collections\ProductCollection;
+
 class Product extends Model
 {
     use HasFactory;
+
+    /**
+     * Create a new Eloquent Collection instance.
+     *
+     * @param  array  $models
+     * @return \App\Collections\ProductCollection
+     */
+    public function newCollection(array $models = [])
+    {
+        return new ProductCollection($models);
+    }
+
 
     protected $fillable = [
         'name',

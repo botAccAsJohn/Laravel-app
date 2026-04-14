@@ -14,6 +14,7 @@ use App\Services\AIService;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Response;
+use Nette\Utils\Paginator;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -67,5 +68,21 @@ class AppServiceProvider extends ServiceProvider
                 'time' => $query->time . 'ms',
             ]);
         });
+
+        // Add Collection macro for manual pagination
+        \Illuminate\Support\Collection::macro('paginate', function ($perPage, $total = null, $page = null, $pageName = 'page') {
+            $page = $page ?: \Illuminate\Pagination\Paginator::resolveCurrentPage($pageName);
+            return new \Illuminate\Pagination\LengthAwarePaginator(
+                $this->forPage($page, $perPage),
+                $total ?: $this->count(),
+                $perPage,
+                $page,
+                [
+                    'path' => \Illuminate\Pagination\Paginator::resolveCurrentPath(),
+                    'pageName' => $pageName,
+                ]
+            );
+        });
+        // Paginator::useBootstrapFive();
     }
 }

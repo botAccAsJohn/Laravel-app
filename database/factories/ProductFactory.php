@@ -38,7 +38,8 @@ class ProductFactory extends Factory
             'category_id'    => $categoryId,
 
             'slug'           => Str::slug($name) . '-' . fake()->unique()->randomNumber(4),
-
+            'image_path'     => 'products/default.jpg',
+            'quantity'       => fake()->numberBetween(0, 50),
             'is_active'      => fake()->boolean(80),
         ];
     }

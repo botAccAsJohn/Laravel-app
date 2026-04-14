@@ -15,30 +15,17 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Auth;
+use App\Models\Product;
 
 Route::get('/', function () {
     return view('welcome');
 });
 
-Route::get('/test/broadcast-order', function () {
-    // if (Auth::user()?->role !== 'admin') {
-    //     abort(403);
-    // }
-    // Create a dummy order for testing
-    $order = Order::create([
-        'user_id' => 1,
-        'status' => 'pending',
-        'payment_method' => 'cod',
-        'address' => '123, Demo Street, Surat, Gujarat, India',
-        'phone' => '9876543210',
-        'total_amount' => 1500.00,
-        'discount_amount' => 200.00,
-        'final_amount' => 1300.00,
-        'placed_at' => now(),
-    ]);
-    broadcast(new \App\Events\OrderPlaced($order));
-    return "Dummy Order Placed and Broadcasted as ID: " . $order->id;
-});
+// Route::get('/test', function () {
+//     while (true) {
+//         Product::getAllProductsFromCache();
+//     }
+// });
 
 Route::get('/dashboard', function (CacheMonitorService $monitor) {
     if (Auth::user()->role !== 'admin') {
@@ -88,6 +75,10 @@ Route::middleware(['auth'])->group(function () {
         // Cache Monitor (admin only)
         Route::get('/admin/cache', [CacheMonitorController::class, 'index'])->name('admin.cache.index');
         Route::post('/admin/cache/clear', [CacheMonitorController::class, 'clear'])->name('admin.cache.clear');
+
+        // Sales Analytics (admin only)
+        Route::get('/admin/analytics', [\App\Http\Controllers\Admin\SalesAnalyticsController::class, 'index'])->name('admin.analytics.index');
+        Route::get('/admin/analytics/export', [\App\Http\Controllers\Admin\SalesAnalyticsController::class, 'export'])->name('admin.analytics.export');
     });
     Route::resource('products', Product2Controller::class)->only(['index', 'show']);
 
@@ -105,6 +96,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/recently-viewed', [\App\Http\Controllers\RecentlyViewController::class, 'index'])->name('recently.index');
     Route::post('/recently-viewed/clear', [\App\Http\Controllers\RecentlyViewController::class, 'clear'])->name('recently.clear');
 
+    // Order History Analysis
+    Route::get('/orders/analytics', [OrderController::class, 'analytics'])->name('orders.analytics');
     Route::resource('orders', OrderController::class);
 
     // Logs Route
