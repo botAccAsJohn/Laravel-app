@@ -6,6 +6,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Cache;
+
 
 class User extends Authenticatable
 {
@@ -50,5 +52,16 @@ class User extends Authenticatable
     public function orders()
     {
         return $this->hasMany(Order::class);
+    }
+
+    protected static function booted(): void
+    {
+        static::updated(function (User $user) {
+            Cache::tags(['users'])->forget("auth_user:{$user->id}");
+        });
+
+        static::deleted(function (User $user) {
+            Cache::tags(['users'])->forget("auth_user:{$user->id}");
+        });
     }
 }

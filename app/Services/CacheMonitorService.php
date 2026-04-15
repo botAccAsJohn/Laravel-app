@@ -25,9 +25,9 @@ class CacheMonitorService
      */
     public function stats(): array
     {
-        $hitRate   = $this->hitRate();
-        $items     = $this->cachedItems();
         $redisInfo = $this->redisInfo();
+        $hitRate   = $this->hitRate($redisInfo);
+        $items     = $this->cachedItems();
 
         return [
             'hit_rate'       => $hitRate,
@@ -41,34 +41,33 @@ class CacheMonitorService
     }
 
     /**
-     * Calculate cache hit rate from today's Redis cache event metrics.
+     * Calculate cache hit rate from Redis server's own keyspace stats.
+     * These are always accurate — Redis tracks every GET hit/miss natively.
      */
-    public function hitRate(): array
+    public function hitRate(array $redisInfo = []): array
     {
         try {
-            $date = date('Y-m-d');
-            $hits = (int) Redis::get("cache_metrics:hits:{$date}");
-            $misses = (int) Redis::get("cache_metrics:misses:{$date}");
-
-            $total = $hits + $misses;
-            $rate  = $total > 0 ? round(($hits / $total) * 100, 1) : 0;
-            
-            $recentRaw = Redis::lrange("cache_metrics:recent", 0, 9); // top 10
-            $recent = [];
-            foreach ($recentRaw as $raw) {
-                $recent[] = json_decode($raw, true);
+            if (empty($redisInfo)) {
+                $redisInfo = $this->redisInfo();
             }
+
+            $hits   = (int) ($redisInfo['hits'] ?? 0);
+            $misses = (int) ($redisInfo['misses'] ?? 0);
+            $total  = $hits + $misses;
+            $rate   = $total > 0 ? round(($hits / $total) * 100, 1) : 0;
 
             return [
                 'hits'   => $hits,
                 'misses' => $misses,
                 'rate'   => $rate,
                 'total'  => $total,
-                'recent' => $recent,
             ];
         } catch (\Exception $e) {
             return [
-                'hits' => 0, 'misses' => 0, 'rate' => 0, 'total' => 0, 'recent' => []
+                'hits' => 0,
+                'misses' => 0,
+                'rate' => 0,
+                'total' => 0,
             ];
         }
     }
@@ -79,20 +78,24 @@ class CacheMonitorService
     public function cachedItems(): array
     {
         $items = [];
+        $cacheRedis  = Redis::connection('cache');
+        $cachePrefix = config('cache.prefix');
 
         foreach ($this->knownKeys as $key => $label) {
-            $value = Cache::get($key);
-            $exists = $value !== null;
+            $fullRedisKey = $cacheKey = $cachePrefix . $key;
+            $exists = (bool) $cacheRedis->exists($fullRedisKey);
 
             $size  = 0;
             $count = null;
             $ttl   = null;
 
             if ($exists) {
-                $serialized = serialize($value);
-                $size = strlen($serialized);
+                // Size from raw Redis (no PHP deserialization cost)
+                $size = (int) $cacheRedis->strlen($fullRedisKey);
+                $ttl  = $this->getKeyTtl($key);
 
-                // Count elements for collections/arrays
+                // Count elements — pull from cache only for counting
+                $value = Cache::get($key);
                 if ($value instanceof \Illuminate\Support\Collection) {
                     $count = $value->count();
                 } elseif (is_array($value)) {
@@ -100,9 +103,6 @@ class CacheMonitorService
                 } elseif (is_numeric($value)) {
                     $count = (int) $value;
                 }
-
-                // Try to get TTL from Redis directly
-                $ttl = $this->getKeyTtl($key);
             }
 
             $items[] = [
@@ -129,58 +129,35 @@ class CacheMonitorService
         $items = [];
 
         try {
-            $prefix = config('cache.prefix');
+            $cacheRedis = Redis::connection('cache');
+            $cachePrefix = config('cache.prefix');
 
-            // Scan for product:single:* keys
-            $cursor  = '0';
-            $pattern = $prefix . 'products:single:*';
-            $found   = [];
-
-            do {
-                [$cursor, $keys] = Redis::scan($cursor, 'MATCH', $pattern, 'COUNT', 100);
-                $found = array_merge($found, $keys);
-            } while ($cursor !== '0');
-
-            foreach ($found as $fullKey) {
-                $cleanKey = str_replace($prefix, '', $fullKey);
-                $slug     = str_replace('products:single:', '', $cleanKey);
-                $ttl      = Redis::ttl($fullKey);
-
-                $items[] = [
-                    'key'    => $cleanKey,
-                    'label'  => "Product: {$slug}",
-                    'exists' => true,
-                    'size'   => $this->formatBytes((int) Redis::strlen($fullKey)),
-                    'count'  => null,
-                    'ttl'    => $ttl > 0 ? $ttl : null,
-                ];
-            }
-
-            // Scan cart and viewed keys
-            $dynamicPatterns = [
-                $prefix . 'cart:user:*'    => 'Cart',
-                $prefix . 'viewed:user:*'  => 'Recently Viewed',
+            $patterns = [
+                $cachePrefix . 'products:single:*' => ['strip' => 'products:single:', 'labelFn' => fn($s) => "Product: {$s}"],
+                $cachePrefix . 'product:*'         => ['strip' => null, 'labelFn' => fn($s) => 'Filtered Product Page'],
+                $cachePrefix . 'cart:user:*'       => ['strip' => null, 'labelFn' => fn($s) => 'Cart (User #' . preg_replace('/.*:(\d+)$/', '$1', $s) . ')'],
+                $cachePrefix . 'viewed:user:*'     => ['strip' => null, 'labelFn' => fn($s) => 'Recently Viewed (User #' . preg_replace('/.*:(\d+)$/', '$1', $s) . ')'],
             ];
 
-            foreach ($dynamicPatterns as $pat => $labelPrefix) {
+            foreach ($patterns as $pattern => $opts) {
                 $cursor = '0';
                 $found  = [];
 
                 do {
-                    [$cursor, $keys] = Redis::scan($cursor, 'MATCH', $pat, 'COUNT', 100);
-                    $found = array_merge($found, $keys);
+                    [$cursor, $keys] = $cacheRedis->scan($cursor, 'MATCH', $pattern, 'COUNT', 100);
+                    $found = array_merge($found, $keys ?? []);
                 } while ($cursor !== '0');
 
                 foreach ($found as $fullKey) {
-                    $cleanKey = str_replace($prefix, '', $fullKey);
-                    $userId   = preg_replace('/.*:(\d+)$/', '$1', $cleanKey);
-                    $ttl      = Redis::ttl($fullKey);
+                    $cleanKey = str_replace($cachePrefix, '', $fullKey);
+                    $label    = ($opts['labelFn'])($cleanKey);
+                    $ttl      = $cacheRedis->ttl($fullKey);
 
                     $items[] = [
                         'key'    => $cleanKey,
-                        'label'  => "{$labelPrefix} (User #{$userId})",
+                        'label'  => $label,
                         'exists' => true,
-                        'size'   => $this->formatBytes((int) Redis::strlen($fullKey)),
+                        'size'   => $this->formatBytes((int) $cacheRedis->strlen($fullKey)),
                         'count'  => null,
                         'ttl'    => $ttl > 0 ? $ttl : null,
                     ];
@@ -263,7 +240,7 @@ class CacheMonitorService
         try {
             $prefix  = config('cache.prefix');
             $fullKey = $prefix . $key;
-            $ttl     = Redis::ttl($fullKey);
+            $ttl     = Redis::connection('cache')->ttl($fullKey);
             return $ttl > 0 ? $ttl : null;
         } catch (\Exception $e) {
             return null;
@@ -277,33 +254,23 @@ class CacheMonitorService
     {
         $cleared = [];
 
-        foreach (array_keys($this->knownKeys) as $key) {
-            if (Cache::forget($key)) {
-                $cleared[] = $key;
-            }
-        }
-
-        // Also flush dynamic keys via Redis SCAN
         try {
-            $prefix   = config('cache.prefix');
-            $patterns = [
-                $prefix . 'products:single:*',
-                $prefix . 'cart:user:*',
-                $prefix . 'viewed:user:*',
-            ];
-
-            foreach ($patterns as $pattern) {
-                $cursor = '0';
-                do {
-                    [$cursor, $keys] = Redis::scan($cursor, 'MATCH', $pattern, 'COUNT', 100);
-                    if (!empty($keys)) {
-                        Redis::del(...$keys);
-                        $cleared = array_merge($cleared, array_map(fn($k) => str_replace($prefix, '', $k), $keys));
-                    }
-                } while ($cursor !== '0');
+            // Collect what we're about to clear for the report
+            foreach (array_keys($this->knownKeys) as $key) {
+                if (Cache::has($key)) {
+                    $cleared[] = $key;
+                }
             }
+
+            // Flush the entire Redis cache store.
+            // This correctly handles all prefix logic internally and ONLY clears
+            // the cache store — sessions live on a separate Redis connection ('default')
+            // and queues live in the database, so neither is affected.
+            Cache::store('redis')->getStore()->flush();
+
+            $cleared[] = '+ all dynamic product/cart/viewed page caches';
         } catch (\Exception $e) {
-            // Silently skip on SCAN errors
+            Log::error('Cache clear failed: ' . $e->getMessage());
         }
 
         return $cleared;

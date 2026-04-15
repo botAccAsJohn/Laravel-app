@@ -11,6 +11,7 @@ use App\Services\MathService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Blade;
 use App\Services\AIService;
+use App\Auth\RedisUserProvider;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Response;
@@ -49,7 +50,9 @@ class AppServiceProvider extends ServiceProvider
         \Illuminate\Support\Facades\RateLimiter::for('api', function (\Illuminate\Http\Request $request) {
             return \Illuminate\Cache\RateLimiting\Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
         });
-        View::composer('*', function ($view) {
+        // Only provide user to layouts, not every single partial/component
+        // View::composer('*', function ($view) {
+        View::composer(['layouts.*', 'admin.*', 'dashboard'], function ($view) {
             $view->with('user', Auth::user());
         });
         Blade::directive('currency', function ($amount) {
@@ -83,6 +86,11 @@ class AppServiceProvider extends ServiceProvider
                 ]
             );
         });
-        // Paginator::useBootstrapFive();
+        Auth::provider('redis-eloquent', function ($app, array $config) {
+            return new RedisUserProvider(
+                $app['hash'],
+                $config['model']
+            );
+        });
     }
 }

@@ -13,6 +13,52 @@ use Illuminate\Support\Str;
 
 class ProductService
 {
+
+    public function dosomething($request)
+    {
+        $filters = [
+            'categories' => (array) $request->input('categories', []),
+            'min_price' => $request->filled('min_price') ? (float) $request->input('min_price') : null,
+            'max_price' => $request->filled('max_price') ? (float) $request->input('max_price') : null,
+            'in_stock' => $request->boolean('in_stock'),
+            'on_sale' => $request->boolean('on_sale'),
+            'sort' => $request->input('sort', 'newest'),
+        ];
+        ksort($filters);
+        $page = (int) $request->get('page', 1);
+        $payload = [
+            'filters'  => $filters,
+            'page'     => $page
+        ];
+        $key = md5(json_encode($payload));
+        $cacheKey = 'product:' . $key;
+
+
+        return Cache::tags('productsPage')->remember($cacheKey, 60 * 60 * 24, function () use ($request, $page) {
+            $results = $this->filterProducts(Product::getAllProductsFromCache(), $request);
+
+            $perPage = 12;
+            $items = $results['products'];
+
+            $paginated = new \Illuminate\Pagination\LengthAwarePaginator(
+                $items->forPage($page, $perPage)->values(),
+                $items->count(),
+                $perPage,
+                $page,
+                ['path' => \Illuminate\Pagination\Paginator::resolveCurrentPath(), 'query' => $request->query()]
+            );
+
+            return [
+                'products'   => $paginated,
+                'filters'    => $results['filters'],
+                'priceRange' => $results['priceRange']
+            ];
+        });
+    }
+
+
+
+
     public function create(array $validated, ?UploadedFile $imageFile = null): Product
     {
         if (isset($validated['price']) && (float) $validated['price'] <= 0) {
@@ -240,6 +286,4 @@ class ProductService
             'priceRange' => $priceRange,
         ];
     }
-
-
 }

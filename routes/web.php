@@ -21,12 +21,6 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-// Route::get('/test', function () {
-//     while (true) {
-//         Product::getAllProductsFromCache();
-//     }
-// });
-
 Route::get('/dashboard', function (CacheMonitorService $monitor) {
     if (Auth::user()->role !== 'admin') {
         return redirect()->route('products.index');
@@ -40,17 +34,6 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
-
-// Route::controller(Product2Controller::class)->group(function () {
-//     Route::get('/products',          'index')->name('products.index');
-//     Route::get('/products/create',   'create')->name('products.create');
-//     Route::get('/products/{id}',     'show')->name('products.show');
-//     Route::get('/products/{id}/edit', 'edit')->name('products.edit');
-//     Route::post('/products',         'store')->name('products.store');
-//     Route::put('/products/{id}',     'update')->name('products.update');
-//     Route::delete('/products/{id}',  'destroy')->name('products.destroy');
-// });
-
 
 Route::get('/generate-link/{id}', function ($id) {
     return URL::temporarySignedRoute(

@@ -63,6 +63,7 @@ class Product extends Model
 
     const TTL_ALL_PRODUCTS = 60 * 60; // 1 hour – shared TTL for both cache layers
     const CACHE_KEY_ALL = 'products:all';
+    const CACHE_NAME = 'products';
     const CACHE_KEY_COUNT = 'products:count';
     const CACHE_KEY_SINGLE = 'products:single:'; // append slug → "products:single:my-product"
 
@@ -72,10 +73,20 @@ class Product extends Model
             return Product::with('category')->latest()->get();
         });
     }
+    public static function getPaginatedProductsFromCache(int $page = 1, int $perPage = 12)
+    {
+        $key = md5("page:{$page}:perPage:{$perPage}");
+        $cacheKey = self::CACHE_NAME . "_{$key}";
+
+        return Cache::remember($cacheKey, self::TTL_ALL_PRODUCTS, function () use ($page, $perPage) {
+            return Product::with('category')
+                ->latest()
+                ->paginate($perPage, ['*'], 'page', $page);
+        });
+    }
 
     public static function countFromCache(): int
     {
-        Log::channel('orders')->warning("Just testing out the things");
         return Cache::remember(self::CACHE_KEY_COUNT, self::TTL_ALL_PRODUCTS, function () {
             return Product::count();
         });

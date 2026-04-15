@@ -64,12 +64,24 @@ return [
             'level' => env('LOG_LEVEL', 'debug'),
             'replace_placeholders' => true,
         ],
+        'user' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/user.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'replace_placeholders' => true,
+        ],
+        'admin' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/admin.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'replace_placeholders' => true,
+        ],
 
         'daily' => [
             'driver' => 'daily',
             'path' => storage_path('logs/laravel.log'),
             'level' => env('LOG_LEVEL', 'debug'),
-            'days' => env('LOG_DAILY_DAYS', 14),
+            'days' => env('LOG_DAILY_DAYS', 7),
             'replace_placeholders' => true,
         ],
 
@@ -143,13 +155,13 @@ return [
             'driver' => 'daily',
             'path' => storage_path('logs/db/db.log'),
             'level' => 'debug',
-            'days' => 17,
+            'days' => 7,
         ],
         'RedisInteraction' => [
             'driver' => 'daily',
             'path' => storage_path('logs/redis/log.log'),
             'level' => 'debug',
-            'days' => 14,
+            'days' => 3,
         ],
 
     ],

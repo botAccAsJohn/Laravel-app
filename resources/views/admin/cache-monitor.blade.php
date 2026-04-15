@@ -126,7 +126,7 @@
                                 </div>
 
                                 <div class="mt-3 h-2 rounded-full bg-gray-200">
-                                    <div class="h-2 rounded-full bg-indigo-500" style="width: {{ $rate }} %;"></div>
+                                    <div class="h-2 rounded-full bg-indigo-500" style="width: {{ $rate }}%;"></div>
                                 </div>
                             </div>
                         </div>
@@ -178,27 +178,53 @@
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">
                                 <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Key</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Label / Key</th>
                                     <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Count</th>
                                     <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Size</th>
                                     <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">TTL</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-100 bg-white">
-                                @foreach ($stats['cached_items'] ?? [] as $item)
+                                @forelse ($stats['cached_items'] ?? [] as $item)
                                 <tr class="hover:bg-gray-50">
-                                    <td class="px-6 py-4 text-sm font-medium text-gray-900">{{ $item['key'] }}</td>
+                                    <td class="px-6 py-4">
+                                        <div class="text-sm font-semibold text-gray-900">{{ $item['label'] }}</div>
+                                        <div class="text-xs text-gray-400 font-mono mt-0.5">{{ $item['key'] }}</div>
+                                    </td>
                                     <td class="px-6 py-4">
                                         <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold {{ $item['exists'] ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700' }}">
-                                            {{ $item['exists'] ? 'WARM' : 'COLD' }}
+                                            {{ $item['exists'] ? '● WARM' : '○ COLD' }}
                                         </span>
+                                    </td>
+                                    <td class="px-6 py-4 text-sm font-medium text-gray-700">
+                                        {{ isset($item['count']) ? number_format($item['count']) : '—' }}
                                     </td>
                                     <td class="px-6 py-4 text-sm text-gray-700">{{ $item['size'] }}</td>
                                     <td class="px-6 py-4 text-sm text-gray-700">
-                                        {{ isset($item['ttl']) ? (int)$item['ttl'].'s' : '—' }}
+                                        @if(isset($item['ttl']))
+                                            @php
+                                                $mins = floor($item['ttl'] / 60);
+                                                $secs = $item['ttl'] % 60;
+                                            @endphp
+                                            <span title="{{ $item['ttl'] }}s">
+                                                {{ $mins > 0 ? $mins.'m ' : '' }}{{ $secs }}s
+                                            </span>
+                                        @else
+                                            <span class="text-gray-400">—</span>
+                                        @endif
                                     </td>
                                 </tr>
-                                @endforeach
+                                @empty
+                                <tr>
+                                    <td colspan="5" class="px-6 py-12 text-center text-sm text-gray-400">
+                                        <div class="flex flex-col items-center gap-2">
+                                            <svg class="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg>
+                                            Cache is empty — all keys are COLD.
+                                        </div>
+                                    </td>
+                                </tr>
+                                @endforelse
                             </tbody>
                         </table>
                     </div>
