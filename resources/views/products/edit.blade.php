@@ -3,8 +3,8 @@
 @section('content')
 <div class="max-w-2xl mx-auto px-4 py-8">
     <div class="flex items-center justify-between mb-6">
-        <h1 class="text-3xl font-bold text-gray-800">Edit Product</h1>
-        <a href="{{ route('products.index') }}" class="text-gray-600 hover:text-gray-900">Back to List</a>
+        <h1 class="text-3xl font-bold text-gray-800">{{ __('products.edit_product') }}</h1>
+        <a href="{{ route('products.index') }}" class="text-gray-600 hover:text-gray-900">{{ __('products.back_to_list') }}</a>
     </div>
 
     @if ($errors->any())
@@ -24,28 +24,28 @@
 
         {{-- Name --}}
         <div>
-            <label class="block text-gray-700 font-bold mb-1">Name <span class="text-red-500">*</span></label>
+            <label class="block text-gray-700 font-bold mb-1">{{ __('products.name') }} <span class="text-red-500">*</span></label>
             <input type="text" name="name" value="{{ old('name', $product->name) }}"
                    class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
         </div>
 
         {{-- Slug --}}
         <div>
-            <label class="block text-gray-700 font-bold mb-1">Slug</label>
+            <label class="block text-gray-700 font-bold mb-1">{{ __('products.slug') }}</label>
             <input type="text" name="slug" value="{{ old('slug', $product->slug) }}"
                    class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
         </div>
 
         {{-- Description --}}
         <div>
-            <label class="block text-gray-700 font-bold mb-1">Description</label>
+            <label class="block text-gray-700 font-bold mb-1">{{ __('products.description') }}</label>
             <textarea name="description" rows="4"
                       class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">{{ old('description', $product->description) }}</textarea>
         </div>
 
         {{-- Price --}}
         <div>
-            <label class="block text-gray-700 font-bold mb-1">Price (₹) <span class="text-red-500">*</span></label>
+            <label class="block text-gray-700 font-bold mb-1">{{ __('products.price') }} (₹) <span class="text-red-500">*</span></label>
             <input type="number" step="0.01" name="price" value="{{ old('price', $product->price) }}" min="0.01"
                    class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
         </div>
@@ -53,8 +53,8 @@
         {{-- Discount Price & Stock --}}
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-                <label class="block text-gray-700 font-bold mb-1">Discount Price (₹)
-                    <span class="text-gray-400 font-normal text-sm">— optional</span>
+                <label class="block text-gray-700 font-bold mb-1">{{ __('products.discount_price') }} (₹)
+                    <span class="text-gray-400 font-normal text-sm">— {{ __('products.optional') }}</span>
                 </label>
                 <input type="number" step="0.01" name="discount_price"
                        value="{{ old('discount_price', $product->discount_price) }}" min="0.01"
@@ -63,7 +63,7 @@
 
             {{-- Quantity (Stock) --}}
             <div>
-                <label class="block text-gray-700 font-bold mb-1">Stock Quantity <span class="text-red-500">*</span></label>
+                <label class="block text-gray-700 font-bold mb-1">{{ __('products.stock') }} <span class="text-red-500">*</span></label>
                 <input type="number" name="quantity" value="{{ old('quantity', $product->quantity) }}" min="0" step="1"
                        class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
             </div>
@@ -71,7 +71,7 @@
 
         {{-- Category --}}
         <div>
-            <label class="block text-gray-700 font-bold mb-1">Category</label>
+            <label class="block text-gray-700 font-bold mb-1">{{ __('products.category') }}</label>
             <select name="category_id" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
                 <option value="">— None —</option>
                 @foreach($categories as $category)
@@ -85,8 +85,8 @@
 
         {{-- Tags --}}
         <div>
-            <label class="block text-gray-700 font-bold mb-1">Tags
-                <span class="text-gray-400 font-normal text-sm">— comma-separated</span>
+            <label class="block text-gray-700 font-bold mb-1">{{ __('products.tags') }}
+                <span class="text-gray-400 font-normal text-sm">— {{ __('products.tags_help') }}</span>
             </label>
             <input type="text" name="tags"
                    value="{{ old('tags', $product->tags ? implode(', ', $product->tags) : '') }}"
@@ -95,18 +95,16 @@
         </div>
 
         {{-- Current Image --}}
-        @if($product->image_path)
         <div>
-            <label class="block text-gray-700 font-bold mb-1">Current Image</label>
-            <img src="{{ asset('storage/' . $product->image_path) }}" alt="{{ $product->name }}"
+            <label class="block text-gray-700 font-bold mb-1">{{ __('products.current_image') }}</label>
+            <img src="{{ $product->image_url }}" alt="{{ $product->name }}"
                  class="h-32 object-cover rounded border border-gray-200">
         </div>
-        @endif
 
         {{-- Replace Image --}}
         <div>
             <label class="block text-gray-700 font-bold mb-1">
-                {{ $product->image_path ? 'Replace Image' : 'Image' }}
+                {{ $product->image_path ? __('products.replace_image') : __('products.image') }}
             </label>
             <input type="file" name="image" accept="image/jpg,image/jpeg,image/png"
                    class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
@@ -117,12 +115,12 @@
             <input type="hidden" name="is_active" value="0">
             <input type="checkbox" id="is_active" name="is_active" value="1"
                    {{ old('is_active', $product->is_active) ? 'checked' : '' }} class="mr-2">
-            <label for="is_active" class="text-gray-700 font-bold">Active</label>
+            <label for="is_active" class="text-gray-700 font-bold">{{ __('products.active') }}</label>
         </div>
 
         <button type="submit"
                 class="w-full bg-yellow-500 text-white font-bold py-2 px-4 rounded hover:bg-yellow-600 transition">
-            Update Product
+            {{ __('products.update_product') }}
         </button>
     </form>
 </div>

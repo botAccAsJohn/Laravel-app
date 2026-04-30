@@ -3,12 +3,9 @@
 namespace App\Services;
 
 use App\Exceptions\InvalidPriceException;
-use App\Models\Category;
 use App\Models\Product;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\{Log, Cache, Storage};
 use Illuminate\Support\Str;
 
 class ProductService
@@ -24,6 +21,12 @@ class ProductService
             'on_sale' => $request->boolean('on_sale'),
             'sort' => $request->input('sort', 'newest'),
         ];
+
+        if ($filters['min_price'] !== null && $filters['max_price'] !== null && $filters['min_price'] > $filters['max_price']) {
+            $temp = $filters['min_price'];
+            $filters['min_price'] = $filters['max_price'];
+            $filters['max_price'] = $temp;
+        }
         ksort($filters);
         $page = (int) $request->get('page', 1);
         $payload = [
@@ -69,7 +72,7 @@ class ProductService
         }
 
         if ($imageFile) {
-            $validated['image_path'] = $imageFile->store('products', 'public');
+            $validated['image_path'] = Storage::disk('public')->putFile('products', $imageFile);
         }
 
         $validated['tags'] = $this->normalizeTags($validated['tags'] ?? null);
@@ -110,7 +113,7 @@ class ProductService
                     'old_image' => $product->image_path,
                 ]);
             }
-            $validated['image_path'] = $imageFile->store('products', 'public');
+            $validated['image_path'] = Storage::disk('public')->putFile('products', $imageFile);
         }
 
         $validated['tags'] = $this->normalizeTags($validated['tags'] ?? null);
@@ -136,6 +139,11 @@ class ProductService
         // Bust the "all products" list (order/data changed).
         $this->forgetListCache();
 
+        // // Clear listing page cache if image changed (Module 28)
+        if ($updated && $product->wasChanged('image_path')) {
+            Cache::tags('productsPage')->flush();
+        }
+
         // Bust the individual cache for the OLD slug.
         Cache::forget(Product::CACHE_KEY_SINGLE . $product->slug);
 
@@ -155,10 +163,6 @@ class ProductService
 
     public function delete(Product $product): bool
     {
-        if ($product->image_path) {
-            Storage::disk('public')->delete($product->image_path);
-        }
-
         $deleted = $product->delete();
 
         // Bust both the list cache and this product's individual cache entry.
@@ -183,6 +187,7 @@ class ProductService
     {
         Cache::forget(Product::CACHE_KEY_ALL);
         Cache::forget(Product::CACHE_KEY_COUNT);
+        Cache::tags('productsPage')->flush();
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -243,6 +248,12 @@ class ProductService
             'on_sale' => $request->boolean('on_sale'),
             'sort' => $request->input('sort', 'newest'),
         ];
+
+        if ($filters['min_price'] !== null && $filters['max_price'] !== null && $filters['min_price'] > $filters['max_price']) {
+            $temp = $filters['min_price'];
+            $filters['min_price'] = $filters['max_price'];
+            $filters['max_price'] = $temp;
+        }
 
         $priceRange = [
             'min' => (float) $allProducts->map(fn($p) => (float) ($p->discount_price ?? $p->price))->min(),

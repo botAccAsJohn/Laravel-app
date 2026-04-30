@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" dir="{{ app()->getLocale() === 'ar' ? 'rtl' : 'ltr' }}">
 
 <head>
     <meta charset="utf-8">
@@ -9,17 +9,19 @@
     <title>@yield('title', config('app.name', 'Laravel'))</title>
 
     <!-- Fonts -->
-    <!-- <link rel="icon" href="/favicon.ico"> -->
-    <!-- <link rel="preload" href="/favicon.ico" as="image"> -->
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
 
-    <!-- Scripts -->
+    {{-- RTL Support for Arabic --}}
+    @if(app()->getLocale() === 'ar')
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
+    @endif
+
+    <!-- Scripts & Styles -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <!-- Toastr CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
     @stack('styles')
-    @stack('scripts')
 </head>
 
 <body class="font-sans antialiased">
@@ -60,6 +62,8 @@
         });
     </script>
     @endauth
+
+    @stack('scripts')
 </body>
 
 </html>

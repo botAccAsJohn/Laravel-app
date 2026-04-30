@@ -12,7 +12,7 @@ return new class extends Migration {
     {
         Schema::create('orders', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users')->restrictOnDelete();
+            $table->foreignId('user_id')->constrained('users')->restrictOnDelete()->index();
             $table->enum('status', [
                 'pending',
                 'confirmed',
@@ -21,7 +21,7 @@ return new class extends Migration {
                 'delivered',
                 'cancelled',
                 'refunded',
-            ])->default('pending');
+            ])->default('pending')->index();
             $table->enum('payment_method', [
                 'card',
                 'upi',
@@ -35,8 +35,9 @@ return new class extends Migration {
             $table->decimal('total_amount', 10, 2);
             $table->decimal('discount_amount', 10, 2)->default(0);
             $table->decimal('final_amount', 10, 2);
-            $table->timestamp('placed_at')->useCurrent();
+            $table->timestamp('placed_at')->useCurrent()->index();
             $table->timestamp('updated_at')->useCurrent();
+            $table->index(['user_id', 'status', 'placed_at']);
         });
     }
 

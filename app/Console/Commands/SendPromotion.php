@@ -4,6 +4,9 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\PromotionMail;
+use App\Models\User;
 
 class SendPromotion extends Command
 {
@@ -28,12 +31,6 @@ class SendPromotion extends Command
 
         $this->table(['Field', 'Value'], $summary);
 
-        //  $previewData = [
-        //     'discountCode' => $discountCode,
-        //     'discountPercentage' => $discountPercentage,
-        //     'audience' => $audience,
-        // ];
-
         $previewData = [
             'discountCode' => $discountCode,
             'discountPercentage' => $percentage,
@@ -47,18 +44,43 @@ class SendPromotion extends Command
 
         $this->line($this->renderPreview($previewData));
 
-        if (! $this->confirm('Do you want to send this promotion?', false)) {
+        if (!$this->confirm('Do you want to send this promotion?', false)) {
             $this->warn('Promotion cancelled.');
             return self::SUCCESS;
         }
 
-        // ===============================================================
-        // Replace this block with your real email sending logic.
-        // Example:
-        // Mail::to($recipients)->send(new PromotionMail($previewData));
-        // ===============================================================
+        // Get recipients based on audience selection
+        $recipients = $this->getRecipientsByAudience($audience);
 
-        $this->info('Promotion email sent successfully.');
+        if ($recipients->isEmpty()) {
+            $this->warn('No recipients found for the selected audience.');
+            return self::SUCCESS;
+        }
+
+        $this->info("Sending promotion emails to {$recipients->count()} recipients...");
+
+        // Prepare mail data with proper formatting
+        $mailData = [
+            'subject' => $this->buildSubject($discountCode, $percentage),
+            'code' => $discountCode,
+            'percentage' => $percentage,
+            'audience' => Str::headline(str_replace('_', ' ', $audience)),
+        ];
+
+        // Send emails to all recipients
+        $count = 0;
+        foreach ($recipients as $user) {
+            try {
+                Mail::to($user->email)->send(new PromotionMail($mailData));
+                $count++;
+                $this->line("<fg=green>✓</> Email sent to {$user->email}");
+            } catch (\Exception $e) {
+                $this->line("<fg=red>✗</> Failed to send email to {$user->email}: {$e->getMessage()}");
+            }
+        }
+
+        $this->newLine();
+        $this->info("Promotion email sent successfully to {$count} recipients.");
 
         return self::SUCCESS;
     }
@@ -68,7 +90,7 @@ class SendPromotion extends Command
         while (true) {
             $input = $this->ask('Enter discount percentage (1-100)', '20');
 
-            if (! is_numeric($input)) {
+            if (!is_numeric($input)) {
                 $this->error('Discount percentage must be a number.');
                 continue;
             }
@@ -98,5 +120,27 @@ class SendPromotion extends Command
             'percentage' => $data['discountPercentage'],
             'audience' => Str::headline(str_replace('_', ' ', $data['audience'])),
         ])->render();
+    }
+
+    private function getRecipientsByAudience(string $audience)
+    {
+        return match ($audience) {
+            'all_users' => User::where('email_verified_at', '!=', null)->get(),
+            'new_customers' => User::orderBy('created_at', 'desc')
+                ->where('email_verified_at', '!=', null)
+                ->limit(100)
+                ->get(),
+            'inactive' => User::where('last_login_at', '<', now()->subDays(30))
+                ->where('email_verified_at', '!=', null)
+                ->get(),
+            'top_buyers' => User::join('orders', 'users.id', '=', 'orders.user_id')
+                ->select('users.*')
+                ->groupBy('users.id')
+                ->havingRaw('COUNT(orders.id) > ?', [5])
+                ->where('email_verified_at', '!=', null)
+                ->distinct()
+                ->get(),
+            default => collect(),
+        };
     }
 }

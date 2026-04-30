@@ -2,7 +2,7 @@
 
 <section class="group/section space-y-6">
     <div class="flex items-center justify-between px-2">
-        <h2 class="text-2xl font-black text-slate-900 tracking-tight">Shop by Category</h2>
+        <h2 class="text-2xl font-black text-slate-900 tracking-tight">{{ __('products.shop_by_category') }}</h2>
     </div>
 
     <div class="relative">

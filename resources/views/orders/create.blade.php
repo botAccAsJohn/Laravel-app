@@ -64,17 +64,41 @@
                 </div>
 
                 <div class="border-t pt-5">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Coupon Code</h2>
+                    <div class="flex gap-2">
+                        <input type="text" id="coupon_input" name="coupon_code" value="{{ $applied_coupon ?? old('coupon_code') }}"
+                               class="flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                               placeholder="Enter coupon code">
+                        <button type="button" onclick="applyCoupon()"
+                                class="bg-gray-800 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition">
+                            Apply
+                        </button>
+                    </div>
+                    @if(isset($coupon) && $coupon)
+                        <p class="text-sm text-green-600 mt-2">
+                            <i class="fas fa-check-circle"></i> Coupon <strong>{{ $coupon->code }}</strong> applied! ({{ $coupon->type === 'percentage' ? $coupon->value.'%' : 'Rs. '.$coupon->value }} off)
+                        </p>
+                    @endif
+                </div>
+
+                <div class="border-t pt-5">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
                         <div class="rounded-lg bg-gray-50 p-4 border">
-                            <p class="text-gray-500">Total Amount</p>
+                            <p class="text-gray-500">Subtotal</p>
                             <p class="text-lg font-semibold text-gray-800 mt-1">Rs. {{ number_format((float) $total_amount, 2) }}</p>
                         </div>
                         <div class="rounded-lg bg-gray-50 p-4 border">
                             <p class="text-gray-500">Discount</p>
-                            <p class="text-lg font-semibold text-green-600 mt-1">Rs. {{ number_format((float) $discount_amount, 2) }}</p>
+                            <p class="text-lg font-semibold text-green-600 mt-1">Rs. {{ number_format((float) ($discount_amount - ($coupon_discount ?? 0)), 2) }}</p>
                         </div>
+                        @if(isset($coupon_discount) && $coupon_discount > 0)
+                        <div class="rounded-lg bg-green-50 p-4 border border-green-200">
+                            <p class="text-green-700 font-medium">Coupon</p>
+                            <p class="text-lg font-semibold text-green-700 mt-1">- Rs. {{ number_format((float) $coupon_discount, 2) }}</p>
+                        </div>
+                        @endif
                         <div class="rounded-lg bg-gray-50 p-4 border">
-                            <p class="text-gray-500">Final Amount</p>
+                            <p class="text-gray-500">Final Total</p>
                             <p class="text-lg font-semibold text-indigo-700 mt-1">Rs. {{ number_format((float) $final_amount, 2) }}</p>
                         </div>
                     </div>
@@ -92,8 +116,9 @@
                 <h2 class="text-xl font-semibold text-gray-800 mb-4">Order Summary</h2>
 
                 <div class="space-y-4">
-                    @foreach($cart as $item)
+                    @foreach($cart as $productId => $item)
                         @php
+                            if ($productId === '_last_activity_at') continue;
                             $model = $cartModels[$item['id']] ?? null;
                             $effectivePrice = $model && $model->discount_price ? (float) $model->discount_price : (float) $item['price'];
                             $lineTotal = $effectivePrice * $item['quantity'];
@@ -101,8 +126,8 @@
 
                         <div class="flex gap-3 border-b pb-4">
                             <div class="w-16 h-16 bg-gray-100 rounded overflow-hidden flex items-center justify-center shrink-0">
-                                @if($model && $model->image_path)
-                                    <img src="{{ asset('storage/' . $model->image_path) }}" alt="{{ $item['name'] }}" class="w-full h-full object-cover">
+                                @if($model)
+                                    <img src="{{ $model->image_url }}" alt="{{ $item['name'] }}" class="w-full h-full object-cover">
                                 @else
                                     <span class="text-xs text-gray-400">No image</span>
                                 @endif
@@ -135,4 +160,16 @@
         </div>
     </div>
 </div>
+@push('scripts')
+<script>
+    function applyCoupon() {
+        const code = document.getElementById('coupon_input').value;
+        if (!code) return;
+        
+        const url = new URL(window.location.href);
+        url.searchParams.set('coupon_code', code);
+        window.location.href = url.toString();
+    }
+</script>
+@endpush
 @endsection

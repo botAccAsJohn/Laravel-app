@@ -163,6 +163,12 @@ return [
             'level' => 'debug',
             'days' => 3,
         ],
+        'Events' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/events/events.log'),
+            'level' => 'debug',
+            'days' => 3,
+        ],
 
     ],
 

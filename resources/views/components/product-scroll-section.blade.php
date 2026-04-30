@@ -4,7 +4,7 @@
     <div class="flex items-center justify-between px-2">
         <h2 class="text-2xl font-black text-slate-900 tracking-tight">{{ $title }}</h2>
         <a href="{{ $viewAllUrl }}" class="text-sm font-bold text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-1 group">
-            See all
+            {{ __('common.see_all') }}
             <svg class="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" />
             </svg>

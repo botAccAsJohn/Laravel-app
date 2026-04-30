@@ -47,6 +47,16 @@
             @endif
         </div>
 
+        <div>
+            <x-input-label for="preferred_locale" :value="__('Preferred Language')" />
+            <select id="preferred_locale" name="preferred_locale" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                <option value="en" {{ old('preferred_locale', $user->preferred_locale) === 'en' ? 'selected' : '' }}>🇺🇸 English</option>
+                <option value="hi" {{ old('preferred_locale', $user->preferred_locale) === 'hi' ? 'selected' : '' }}>🇮🇳 हिन्दी (Hindi)</option>
+                <option value="ar" {{ old('preferred_locale', $user->preferred_locale) === 'ar' ? 'selected' : '' }}>🇸🇦 العربية (Arabic)</option>
+            </select>
+            <x-input-error class="mt-2" :messages="$errors->get('preferred_locale')" />
+        </div>
+
         <div class="flex items-center gap-4">
             <x-primary-button>{{ __('Save') }}</x-primary-button>
 

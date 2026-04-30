@@ -2,22 +2,13 @@
 
 namespace App\Listeners;
 
-use Cache;
 use Illuminate\Cache\Events\CacheHit;
 use Illuminate\Cache\Events\CacheMissed;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Queue\InteractsWithQueue;
 
-class CacheeventListener
+class CacheEventListener
 {
-    /**
-     * Create the event listener.
-     */
-    public function __construct()
-    {
-        //
-    }
+    public function __construct() {}
 
     public function handleMiss(CacheMissed $event)
     {

@@ -2,17 +2,20 @@
 
 namespace App\Exports;
 
-use App\Models\Order;
-use Maatwebsite\Excel\Concerns\FromCollection;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\{
+    FromCollection,
+    WithHeadings,
+    WithMapping
+};
 
 class SalesExport implements FromCollection, WithHeadings, WithMapping
 {
     /**
      * @param \Illuminate\Support\Collection $orders
      */
-    public function __construct(protected \Illuminate\Support\Collection $orders) {}
+    public function __construct(protected \Illuminate\Support\Collection $orders)
+    {
+    }
 
     /**
      * @return \Illuminate\Support\Collection

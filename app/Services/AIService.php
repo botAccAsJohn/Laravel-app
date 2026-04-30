@@ -2,8 +2,7 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\{Http, Cache};
 
 class AIService
 {
@@ -57,14 +56,14 @@ class AIService
 
         foreach ($history as $turn) {
             $contents[] = [
-                'role'  => $turn['role'],         // 'user' or 'model'
+                'role' => $turn['role'],         // 'user' or 'model'
                 'parts' => [['text' => $turn['text']]],
             ];
         }
 
         // Add the new user message
         $contents[] = [
-            'role'  => 'user',
+            'role' => 'user',
             'parts' => [['text' => $prompt]],
         ];
 

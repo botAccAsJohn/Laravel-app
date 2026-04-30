@@ -48,9 +48,16 @@
             <div class="border rounded-lg p-4">
                 <h3 class="text-lg font-semibold text-gray-800 mb-3">Payment</h3>
                 <p class="text-gray-700">Method: <span class="font-medium">{{ strtoupper($order->payment_method ?? 'N/A') }}</span></p>
-                <p class="text-gray-700 mt-2">Total: <span class="font-medium">Rs. {{ number_format((float) ($order->total_amount ?? 0), 2) }}</span></p>
-                <p class="text-gray-700 mt-2">Discount: <span class="font-medium">Rs. {{ number_format((float) ($order->discount_amount ?? 0), 2) }}</span></p>
-                <p class="text-gray-700 mt-2">Final: <span class="font-semibold text-green-600">Rs. {{ number_format((float) ($order->final_amount ?? 0), 2) }}</span></p>
+                <div class="mt-2 space-y-1">
+                    <p class="text-sm text-gray-600">Subtotal: <span class="font-medium text-gray-800">Rs. {{ number_format((float) ($order->total_amount ?? 0), 2) }}</span></p>
+                    
+                    @if($order->coupon_code)
+                        <p class="text-sm text-indigo-600">Coupon: <span class="font-medium">[{{ $order->coupon_code }}]</span></p>
+                    @endif
+
+                    <p class="text-sm text-green-600">Total Discount: <span class="font-medium">- Rs. {{ number_format((float) ($order->discount_amount ?? 0), 2) }}</span></p>
+                    <p class="text-lg font-bold text-gray-800 border-t pt-1 mt-1">Final Amount: <span class="text-green-600">Rs. {{ number_format((float) ($order->final_amount ?? 0), 2) }}</span></p>
+                </div>
             </div>
         </div>
 
@@ -66,8 +73,8 @@
                 @foreach($order->items as $item)
                     <div class="flex items-center gap-4 border-b pb-4 last:border-0 last:pb-0">
                         <div class="w-16 h-16 bg-gray-100 flex items-center justify-center rounded">
-                            @if($item->product && $item->product->image_path)
-                                <img src="{{ asset('storage/' . $item->product->image_path) }}" alt="{{ $item->product->name }}" class="w-full h-full object-cover">
+                            @if($item->product)
+                                <img src="{{ $item->product->image_url }}" alt="{{ $item->product->name }}" class="w-full h-full object-cover">
                             @else
                                 <span class="text-xs text-gray-400">No Image</span>
                             @endif
@@ -120,6 +127,17 @@
                     </button>
                 </form>
             @endif
+
+            <div class="flex flex-col items-start gap-1">
+                <a href="{{ URL::temporarySignedRoute('invoices.download', now()->addMinutes(10), ['order' => $order->id]) }}"
+                   class="bg-indigo-600 text-white py-2.5 px-6 rounded-lg hover:bg-indigo-700 transition font-medium shadow-sm flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Download Invoice
+                </a>
+                <span class="text-xs text-gray-500 mt-1">Note: This secure link expires in 10 minutes</span>
+            </div>
         </div>
     </div>
 </div>

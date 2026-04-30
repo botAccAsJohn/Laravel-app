@@ -4,11 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Services\OrderService;
-use App\Events\OrderPlaced;
 use App\Events\OrderStatusUpdated;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\{RedirectResponse, Request};
+use Illuminate\Support\Facades\{Auth, Storage};
 use Illuminate\View\View;
 
 class OrderController extends Controller
@@ -42,7 +40,7 @@ class OrderController extends Controller
 
         // 1. General Metrics (Collection: reject, sum, avg)
         $processedOrders = $orders->reject(fn($o) => in_array($o->status, ['cancelled', 'pending']));
-        
+
         $totalOrders = $orders->count();
         $totalSpent = (float) $processedOrders->sum('final_amount');
         $averageOrderValue = (float) $processedOrders->avg('final_amount');
@@ -74,15 +72,22 @@ class OrderController extends Controller
         ));
     }
 
-    public function create(): View|RedirectResponse
+    public function create(Request $request): View|RedirectResponse
     {
-        $summary = $this->service->cartSummary(Auth::id());
+        $couponCode = $request->query('coupon_code');
+        $summary = $this->service->cartSummary(Auth::id(), $couponCode);
 
         if (empty($summary['cart'])) {
             return redirect()->route('cart.index')->with('warning', 'Your cart is empty. Add products before checkout.');
         }
 
-        return view('orders.create', $summary);
+        if ($couponCode && !$summary['coupon']) {
+            session()->flash('error', 'Invalid or expired coupon code.');
+        } elseif ($couponCode && $summary['coupon']) {
+            session()->flash('success', 'Coupon code applied successfully!');
+        }
+
+        return view('orders.create', array_merge($summary, ['applied_coupon' => $couponCode]));
     }
 
     // public function store(Request $request): RedirectResponse
@@ -111,20 +116,28 @@ class OrderController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'address'        => ['required', 'string', 'max:255'],
-            'phone'          => ['nullable', 'string', 'max:20'],
+            'address' => ['required', 'string', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:20'],
             'payment_method' => ['required', 'in:card,upi,wallet,cod,emi,netbanking'],
+            'coupon_code' => ['nullable', 'string', 'max:50'],
         ]);
 
         // Compute summary once — reuse for the empty-cart check AND for order creation
-        $summary = $this->service->cartSummary(Auth::id());
+        $summary = $this->service->cartSummary(Auth::id(), $validated['coupon_code'] ?? null);
         if (empty($summary['cart'])) {
             return redirect()->route('cart.index')->with('warning', 'Your cart is empty. Add products before checkout.');
         }
 
-        $order = $this->service->createFromCart(Auth::user(), $validated, $summary);
+        try {
+            $order = $this->service->createFromCart(Auth::user(), $validated, $summary);
 
-        return redirect()->route('orders.show', $order)->with('success', 'Order created successfully.');
+            return redirect()->route('orders.show', $order->id)->with('success', 'Order created successfully.');
+        } catch (\App\Exceptions\ProductOutOfStockException $e) {
+            return redirect()->route('cart.index')->with('error', $e->getMessage());
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Order creation failed: ' . $e->getMessage());
+            return redirect()->route('cart.index')->with('error', 'Something went wrong while placing your order. Please try again.');
+        }
     }
 
     public function show(Order $order): View
@@ -152,7 +165,7 @@ class OrderController extends Controller
         ]);
 
         $this->service->update($order, $validated);
-        broadcast(new OrderStatusUpdated($order))->toOthers();
+        broadcast(new OrderStatusUpdated($order));
 
         return redirect()->route('orders.index')->with('success', 'Order status updated.');
     }
@@ -177,6 +190,23 @@ class OrderController extends Controller
         $this->service->delete($order);
 
         return redirect()->route('orders.index')->with('success', 'Order deleted.');
+    }
+
+    public function invoice(Request $request, Order $order)
+    {
+        if (!$request->hasValidSignature()) {
+            abort(403, 'Invalid or expired invoice link.');
+        }
+
+        $this->authorizeAccess($order);
+
+        $path = 'invoices/invoice-' . $order->id . '.pdf';
+
+        if (!Storage::disk('public')->exists($path)) {
+            return redirect()->back()->with('error', 'Invoice file not found.');
+        }
+
+        return Storage::disk('public')->download($path, 'invoice-' . $order->id . '.pdf');
     }
 
     private function authorizeAccess(Order $order): void

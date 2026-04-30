@@ -1,21 +1,11 @@
 <?php
 
-use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\Product2Controller;
-use App\Http\Controllers\CartController;
-use App\Http\Controllers\CacheMonitorController;
-use App\Http\Controllers\OrderController;
-use App\Http\Controllers\RecentlyViewController;
+use App\Http\Controllers\{ProfileController, Product2Controller, CacheMonitorController, CartController, OrderController, RecentlyViewController, ReviewController, LocaleController};
+use App\Http\Controllers\Admin\{ReportManagerController, SalesAnalyticsController};
 use App\Services\CacheMonitorService;
-use App\Events\OrderPlaced;
-use App\Models\Order;
-use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Redis;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\URL;
-use Illuminate\Support\Facades\Auth;
-use App\Models\Product;
+use Illuminate\Support\Facades\{Route, Auth};
+
+Route::post('/locale', [LocaleController::class, 'switch'])->name('locale.switch');
 
 Route::get('/', function () {
     return view('welcome');
@@ -35,22 +25,6 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-Route::get('/generate-link/{id}', function ($id) {
-    return URL::temporarySignedRoute(
-        'unsubscribe',              // route name
-        now()->addMinutes(30),      // expiry time
-        ['user' => $id]             // parameter
-    );
-});
-
-Route::get('/unsubscribe/{user}', function (Request $request, $user) {
-    if (!$request->hasValidSignature()) {
-        abort(403, 'Invalid or expired link');
-    }
-    return "User {$user} unsubscribed successfully";
-})->name('unsubscribe');
-
-
 Route::middleware(['auth'])->group(function () {
     Route::middleware(['role:admin'])->group(function () {
         Route::resource('products', Product2Controller::class)->except(['index', 'show']);
@@ -60,8 +34,13 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/admin/cache/clear', [CacheMonitorController::class, 'clear'])->name('admin.cache.clear');
 
         // Sales Analytics (admin only)
-        Route::get('/admin/analytics', [\App\Http\Controllers\Admin\SalesAnalyticsController::class, 'index'])->name('admin.analytics.index');
-        Route::get('/admin/analytics/export', [\App\Http\Controllers\Admin\SalesAnalyticsController::class, 'export'])->name('admin.analytics.export');
+        Route::get('/admin/analytics', [SalesAnalyticsController::class, 'index'])->name('admin.analytics.index');
+        Route::get('/admin/analytics/export', [SalesAnalyticsController::class, 'export'])->name('admin.analytics.export');
+
+        // Reports Manager (admin only)
+        Route::get('/admin/reports', [ReportManagerController::class, 'index'])->name('admin.reports.index');
+        Route::post('/admin/reports/archive', [ReportManagerController::class, 'archive'])->name('admin.reports.archive');
+        Route::post('/admin/reports/cleanup', [ReportManagerController::class, 'bulkCleanup'])->name('admin.reports.cleanup');
     });
     Route::resource('products', Product2Controller::class)->only(['index', 'show']);
 
@@ -76,20 +55,21 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
 
     // Recently Viewed Routes
-    Route::get('/recently-viewed', [\App\Http\Controllers\RecentlyViewController::class, 'index'])->name('recently.index');
-    Route::post('/recently-viewed/clear', [\App\Http\Controllers\RecentlyViewController::class, 'clear'])->name('recently.clear');
+    Route::get('/recently-viewed', [RecentlyViewController::class, 'index'])->name('recently.index');
+    Route::post('/recently-viewed/clear', [RecentlyViewController::class, 'clear'])->name('recently.clear');
 
     // Order History Analysis
     Route::get('/orders/analytics', [OrderController::class, 'analytics'])->name('orders.analytics');
+    Route::get('/invoices/{order}/download', [OrderController::class, 'invoice'])->name('invoices.download');
     Route::resource('orders', OrderController::class);
 
     // Logs Route
     Route::get('/logs', [Product2Controller::class, 'logs'])->name('logs.index');
+
+    // Reviews Route
+    Route::post('/products/{product}/reviews', [ReviewController::class, 'store'])->name('reviews.store');
 });
 
-
 Route::get('/export-products', [Product2Controller::class, 'exportProducts'])->name('products.export');
-
-
 
 require __DIR__ . '/auth.php';

@@ -2,20 +2,10 @@
 
 namespace App\Providers;
 
-use App\Services\OrderService;
+use App\Services\{OrderService, ExternalApiService, CartService, PaymentService, LoggerService, MathService, AIService};
 use Illuminate\Support\ServiceProvider;
-use Illuminate\Support\Facades\Log;
-use App\Services\PaymentService;
-use App\Services\LoggerService;
-use App\Services\MathService;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Blade;
-use App\Services\AIService;
+use Illuminate\Support\Facades\{Log, RateLimiter, Blade, View, Auth, Response, DB, Http, Mail};
 use App\Auth\RedisUserProvider;
-use Illuminate\Support\Facades\View;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Response;
-use Nette\Utils\Paginator;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -38,7 +28,10 @@ class AppServiceProvider extends ServiceProvider
             return new AIService();
         });
         $this->app->bind(OrderService::class, function ($app) {
-            return new OrderService($app->make(\App\Services\CartService::class));
+            return new OrderService($app->make(CartService::class));
+        });
+        $this->app->singleton(ExternalApiService::class, function () {
+            return new ExternalApiService();
         });
     }
 
@@ -47,7 +40,7 @@ class AppServiceProvider extends ServiceProvider
         // [STEP 5] Runs after all providers are registered
         Log::info('[STEP 5] AppServiceProvider boot() called all services ready');
 
-        \Illuminate\Support\Facades\RateLimiter::for('api', function (\Illuminate\Http\Request $request) {
+        RateLimiter::for('api', function (\Illuminate\Http\Request $request) {
             return \Illuminate\Cache\RateLimiting\Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
         });
         // Only provide user to layouts, not every single partial/component
@@ -56,7 +49,14 @@ class AppServiceProvider extends ServiceProvider
             $view->with('user', Auth::user());
         });
         Blade::directive('currency', function ($amount) {
-            return "<?php echo '₹' . number_format($amount, 2); ?>";
+            return "<?php 
+                \$currency = match(App::getLocale()) {
+                    'hi' => 'INR',
+                    'ar' => 'SAR',
+                    default => 'USD'
+                };
+                echo \Illuminate\Support\Number::currency($amount ?? 0, in: \$currency); 
+            ?>";
         });
         Response::macro('success', function ($data) {
             return response()->json([
@@ -64,6 +64,13 @@ class AppServiceProvider extends ServiceProvider
                 'data' => $data
             ]);
         });
+
+        Http::macro('jsonApi', function () {
+            return Http::acceptJson()
+                ->baseUrl('https://fakestoreapi.com')
+                ->withHeaders(['X-API-KEY' => 'my-secret-key']);
+        });
+
         DB::listen(function ($query) {
             Log::channel('DBInteraction')->info('SQL Query', [
                 'sql' => $query->sql,
@@ -71,6 +78,10 @@ class AppServiceProvider extends ServiceProvider
                 'time' => $query->time . 'ms',
             ]);
         });
+
+        if ($this->app->environment('local')) {
+            Mail::alwaysTo(config('mail.admin_email'));
+        }
 
         // Add Collection macro for manual pagination
         \Illuminate\Support\Collection::macro('paginate', function ($perPage, $total = null, $page = null, $pageName = 'page') {

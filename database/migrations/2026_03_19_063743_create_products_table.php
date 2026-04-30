@@ -27,7 +27,8 @@ return new class extends Migration
             $table->foreignId('category_id')
                 ->nullable()
                 ->constrained('categories')
-                ->nullOnDelete();
+                ->nullOnDelete()
+                ->index();
 
             $table->string('slug', 255)->unique();
             $table->string('image_path')->nullable();

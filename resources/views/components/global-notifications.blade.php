@@ -12,11 +12,7 @@ $userId = Auth::id();
         setTimeout(() => {
             if (!window.Echo) return;
 
-            const isAdmin = {
-                {
-                    $isAdmin ? 'true' : 'false'
-                }
-            };
+            const isAdmin = {{ $isAdmin ? 'true' : 'false' }};
             const userId = '{{ $userId }}';
 
             if (isAdmin) {

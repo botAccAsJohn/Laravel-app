@@ -14,14 +14,14 @@
                 <div class="hidden sm:block h-16 w-2 rounded-full bg-indigo-600 shadow-[0_0_20px_rgba(79,70,229,0.4)]"></div>
                 <div>
                     <h1 class="text-4xl md:text-5xl font-black text-slate-900 tracking-tight mb-2">
-                        {{ $is_search ? 'Search Findings' : 'Prime Objects' }}
+                        {{ $is_search ? __('products.search_findings') : __('products.title') }}
                     </h1>
                     <p class="text-slate-500 font-medium flex items-center gap-2">
                         <span class="inline-flex h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
                         @if($is_search)
-                        Discovery of <span class="text-indigo-600 font-bold ml-1">{{ number_format($total_products) }}</span> items
+                        {{ trans_choice('common.products_found', $total_products, ['count' => number_format($total_products)]) }}
                         @else
-                        Curated collection of <span class="text-slate-900 font-bold underline decoration-indigo-500/30 decoration-4 underline-offset-4">{{ number_format($all_products_count) }}</span> items
+                        {{ trans_choice('common.products_found', $all_products_count, ['count' => number_format($all_products_count)]) }}
                         @endif
                     </p>
                 </div>
@@ -32,7 +32,7 @@
                 @if(Auth::user()->role === 'admin')
                 <a href="{{ route('products.create') }}"
                     class="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-2xl bg-slate-900 px-8 py-4 text-sm font-bold text-white transition-all hover:bg-slate-800 hover:shadow-2xl hover:shadow-slate-200 active:scale-95">
-                    <span class="relative z-10 transition-transform group-hover:-translate-x-1">Initialize New Product</span>
+                    <span class="relative z-10 transition-transform group-hover:-translate-x-1">{{ __('products.add_product') }}</span>
                     <svg class="relative z-10 w-4 h-4 transition-transform group-hover:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
                     </svg>
@@ -49,11 +49,11 @@
             {{-- Banner 1: Header Promo --}}
             <div class="relative overflow-hidden rounded-[3rem] bg-indigo-900 p-8 md:p-12 text-white shadow-2xl shadow-indigo-100">
                 <div class="relative z-10 max-w-2xl space-y-4">
-                    <span class="inline-block px-4 py-1.5 rounded-full bg-indigo-500/30 text-xs font-bold uppercase tracking-widest border border-indigo-400/30">Limited Edition Launch</span>
-                    <h2 class="text-4xl md:text-6xl font-black leading-tight italic">Up to 40% off | Next-Gen Audio Solutions</h2>
-                    <p class="text-indigo-100 text-lg font-medium">Experience sound like never before. Shop the premium collection of headphones and earbuds.</p>
+                    <span class="inline-block px-4 py-1.5 rounded-full bg-indigo-500/30 text-xs font-bold uppercase tracking-widest border border-indigo-400/30">{{ __('products.limited_edition') }}</span>
+                    <h2 class="text-4xl md:text-6xl font-black leading-tight italic">{{ __('products.audio_promo_title') }}</h2>
+                    <p class="text-indigo-100 text-lg font-medium">{{ __('products.audio_promo_desc') }}</p>
                     <a href="{{ route('products.index', ['sort' => 'popularity', 'categories[]' => 1]) }}" class="inline-flex items-center gap-2 text-indigo-400 font-black uppercase tracking-widest text-sm hover:text-white transition-colors group">
-                        Explore Collection
+                        {{ __('products.explore_collection') }}
                         <svg class="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
                         </svg>
@@ -67,40 +67,40 @@
                 </div>
             </div>
 
-            <x-product-scroll-section title="Featured Selections" :products="$featured" />
+            <x-product-scroll-section :title="__('products.featured_selections')" :products="$featured" />
 
             {{-- Banner 2: Split View Promo --}}
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div class="group relative overflow-hidden rounded-[2.5rem] bg-orange-50 border border-orange-100 p-8 transition-all hover:shadow-xl hover:-translate-y-1">
-                    <h3 class="text-2xl font-black text-orange-950 mb-2">Summer Cookware</h3>
-                    <p class="text-orange-900/60 font-bold mb-6">Up to 60% OFF | Performance Kitchen Tools</p>
-                    <a href="{{ route('products.index', ['on_sale' => 1]) }}" class="text-sm font-black text-orange-600 uppercase tracking-widest hover:underline">Shop Now</a>
+                    <h3 class="text-2xl font-black text-orange-950 mb-2">{{ __('products.cookware_title') }}</h3>
+                    <p class="text-orange-900/60 font-bold mb-6">{{ __('products.cookware_desc') }}</p>
+                    <a href="{{ route('products.index', ['on_sale' => 1]) }}" class="text-sm font-black text-orange-600 uppercase tracking-widest hover:underline">{{ __('products.shop_now') }}</a>
                     <div class="absolute -right-4 -bottom-4 w-32 h-32 bg-orange-200/40 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
                 </div>
                 <div class="group relative overflow-hidden rounded-[2.5rem] bg-emerald-50 border border-emerald-100 p-8 transition-all hover:shadow-xl hover:-translate-y-1">
-                    <h3 class="text-2xl font-black text-emerald-950 mb-2">Work from Home</h3>
-                    <p class="text-emerald-900/60 font-bold mb-6">Productivity Redefined | Ergonomic Objects</p>
-                    <a href="{{ route('products.index', ['categories[]' => 2]) }}" class="text-sm font-black text-emerald-600 uppercase tracking-widest hover:underline">View All</a>
+                    <h3 class="text-2xl font-black text-emerald-950 mb-2">{{ __('products.wfh_title') }}</h3>
+                    <p class="text-emerald-900/60 font-bold mb-6">{{ __('products.wfh_desc') }}</p>
+                    <a href="{{ route('products.index', ['categories[]' => 2]) }}" class="text-sm font-black text-emerald-600 uppercase tracking-widest hover:underline">{{ __('products.view_all') }}</a>
                     <div class="absolute -right-4 -bottom-4 w-32 h-32 bg-emerald-200/40 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
                 </div>
             </div>
 
-            <x-product-scroll-section title="New Arrivals" :products="$new_arrivals" />
+            <x-product-scroll-section :title="__('products.new_arrivals')" :products="$new_arrivals" />
 
             <x-category-scroll :categories="$categories" />
 
-            <x-product-scroll-section title="On Sale Today" :products="$on_sale" />
+            <x-product-scroll-section :title="__('products.on_sale_today')" :products="$on_sale" />
 
-            <x-product-scroll-section title="Best Sellers" :products="$best_sellers" />
+            <x-product-scroll-section :title="__('products.best_sellers')" :products="$best_sellers" />
 
             {{-- Call to Action / Footer Banner --}}
             <div class="bg-white border border-slate-200 rounded-[3rem] p-12 text-center space-y-6">
-                <h2 class="text-3xl font-black text-slate-900 tracking-tight">Venture deeper into our collection</h2>
-                <p class="text-slate-500 max-w-lg mx-auto font-medium">Search across our full inventory to find the perfect object for your environment.</p>
+                <h2 class="text-3xl font-black text-slate-900 tracking-tight">{{ __('products.venture_deeper') }}</h2>
+                <p class="text-slate-500 max-w-lg mx-auto font-medium">{{ __('products.venture_deeper_desc') }}</p>
                 <div class="pt-4">
                     <a href="{{ route('products.index', ['sort' => 'newest', 'page' => 1]) }}"
                         class="inline-flex items-center justify-center rounded-2xl bg-indigo-600 px-12 py-5 text-sm font-bold text-white shadow-xl shadow-indigo-100 transition-all hover:bg-indigo-700 hover:-translate-y-1 active:scale-95">
-                        Browse All Products
+                        {{ __('products.browse_all') }}
                     </a>
                 </div>
             </div>
@@ -127,13 +127,13 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                             </svg>
                         </div>
-                        <h2 class="text-2xl font-black text-slate-800 tracking-tight">Zero Matches Found</h2>
+                        <h2 class="text-2xl font-black text-slate-800 tracking-tight">{{ __('products.no_products') }}</h2>
                         <p class="mt-3 text-slate-500 font-medium max-w-sm mx-auto leading-relaxed">
-                            We couldn't find any products matching your current parameters. Try adjusting your filters or sweeping the reset.
+                            {{ __('products.no_results_desc') }}
                         </p>
                         <a href="{{ route('products.index') }}"
                             class="mt-10 inline-flex items-center justify-center rounded-2xl bg-indigo-600 px-10 py-4 text-sm font-bold text-white shadow-xl shadow-indigo-200 transition-all hover:bg-indigo-700 hover:-translate-y-1 active:scale-95">
-                            Reset Search Parameters
+                            {{ __('products.reset_params') }}
                         </a>
                     </div>
                     @endforelse

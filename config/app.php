@@ -67,7 +67,7 @@ return [
     |
     */
 
-    'timezone' => 'UTC',
+    'timezone' => 'Asia/Kolkata',
 
     /*
     |--------------------------------------------------------------------------
@@ -119,6 +119,9 @@ return [
     | Supported drivers: "file", "cache"
     |
     */
+
+    'currency' => env('APP_CURRENCY', 'USD'),
+
 
     'maintenance' => [
         'driver' => env('APP_MAINTENANCE_DRIVER', 'file'),

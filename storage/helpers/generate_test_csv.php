@@ -1,7 +1,7 @@
 <?php
 
 $filePath = __DIR__ . '/large_products.csv';
-$rowCount = 1200;
+$rowCount = 200;
 
 $categories = [1, 2, 3, 4, 5]; // Based on previous check
 $headers = ['name', 'description', 'price', 'discount_price', 'tags', 'category_id', 'slug', 'quantity'];

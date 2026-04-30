@@ -2,9 +2,7 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Redis;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\{Cache, Redis, Log};
 
 class CacheMonitorService
 {
@@ -13,9 +11,9 @@ class CacheMonitorService
      * These are the keys we actively manage in the app.
      */
     private array $knownKeys = [
-        'products:all'     => 'All Products List',
-        'products:count'   => 'Products Count',
-        'categories:all'   => 'All Categories',
+        'products:all' => 'All Products List',
+        'products:count' => 'Products Count',
+        'categories:all' => 'All Categories',
     ];
 
     // ── Public API ────────────────────────────────────────────────────────────
@@ -26,16 +24,16 @@ class CacheMonitorService
     public function stats(): array
     {
         $redisInfo = $this->redisInfo();
-        $hitRate   = $this->hitRate($redisInfo);
-        $items     = $this->cachedItems();
+        $hitRate = $this->hitRate($redisInfo);
+        $items = $this->cachedItems();
 
         return [
-            'hit_rate'       => $hitRate,
-            'cached_items'   => $items,
-            'redis_info'     => $redisInfo,
-            'total_keys'     => $redisInfo['keys'] ?? '—',
-            'memory_used'    => $redisInfo['memory_used'] ?? '—',
-            'uptime_days'    => $redisInfo['uptime_days'] ?? '—',
+            'hit_rate' => $hitRate,
+            'cached_items' => $items,
+            'redis_info' => $redisInfo,
+            'total_keys' => $redisInfo['keys'] ?? '—',
+            'memory_used' => $redisInfo['memory_used'] ?? '—',
+            'uptime_days' => $redisInfo['uptime_days'] ?? '—',
             'connected_clients' => $redisInfo['connected_clients'] ?? '—',
         ];
     }
@@ -51,16 +49,16 @@ class CacheMonitorService
                 $redisInfo = $this->redisInfo();
             }
 
-            $hits   = (int) ($redisInfo['hits'] ?? 0);
+            $hits = (int) ($redisInfo['hits'] ?? 0);
             $misses = (int) ($redisInfo['misses'] ?? 0);
-            $total  = $hits + $misses;
-            $rate   = $total > 0 ? round(($hits / $total) * 100, 1) : 0;
+            $total = $hits + $misses;
+            $rate = $total > 0 ? round(($hits / $total) * 100, 1) : 0;
 
             return [
-                'hits'   => $hits,
+                'hits' => $hits,
                 'misses' => $misses,
-                'rate'   => $rate,
-                'total'  => $total,
+                'rate' => $rate,
+                'total' => $total,
             ];
         } catch (\Exception $e) {
             return [
@@ -78,21 +76,21 @@ class CacheMonitorService
     public function cachedItems(): array
     {
         $items = [];
-        $cacheRedis  = Redis::connection('cache');
+        $cacheRedis = Redis::connection('cache');
         $cachePrefix = config('cache.prefix');
 
         foreach ($this->knownKeys as $key => $label) {
             $fullRedisKey = $cacheKey = $cachePrefix . $key;
             $exists = (bool) $cacheRedis->exists($fullRedisKey);
 
-            $size  = 0;
+            $size = 0;
             $count = null;
-            $ttl   = null;
+            $ttl = null;
 
             if ($exists) {
                 // Size from raw Redis (no PHP deserialization cost)
                 $size = (int) $cacheRedis->strlen($fullRedisKey);
-                $ttl  = $this->getKeyTtl($key);
+                $ttl = $this->getKeyTtl($key);
 
                 // Count elements — pull from cache only for counting
                 $value = Cache::get($key);
@@ -106,12 +104,12 @@ class CacheMonitorService
             }
 
             $items[] = [
-                'key'    => $key,
-                'label'  => $label,
+                'key' => $key,
+                'label' => $label,
                 'exists' => $exists,
-                'size'   => $this->formatBytes($size),
-                'count'  => $count,
-                'ttl'    => $ttl,
+                'size' => $this->formatBytes($size),
+                'count' => $count,
+                'ttl' => $ttl,
             ];
         }
 
@@ -134,14 +132,14 @@ class CacheMonitorService
 
             $patterns = [
                 $cachePrefix . 'products:single:*' => ['strip' => 'products:single:', 'labelFn' => fn($s) => "Product: {$s}"],
-                $cachePrefix . 'product:*'         => ['strip' => null, 'labelFn' => fn($s) => 'Filtered Product Page'],
-                $cachePrefix . 'cart:user:*'       => ['strip' => null, 'labelFn' => fn($s) => 'Cart (User #' . preg_replace('/.*:(\d+)$/', '$1', $s) . ')'],
-                $cachePrefix . 'viewed:user:*'     => ['strip' => null, 'labelFn' => fn($s) => 'Recently Viewed (User #' . preg_replace('/.*:(\d+)$/', '$1', $s) . ')'],
+                $cachePrefix . 'product:*' => ['strip' => null, 'labelFn' => fn($s) => 'Filtered Product Page'],
+                $cachePrefix . 'cart:user:*' => ['strip' => null, 'labelFn' => fn($s) => 'Cart (User #' . preg_replace('/.*:(\d+)$/', '$1', $s) . ')'],
+                $cachePrefix . 'viewed:user:*' => ['strip' => null, 'labelFn' => fn($s) => 'Recently Viewed (User #' . preg_replace('/.*:(\d+)$/', '$1', $s) . ')'],
             ];
 
             foreach ($patterns as $pattern => $opts) {
                 $cursor = '0';
-                $found  = [];
+                $found = [];
 
                 do {
                     [$cursor, $keys] = $cacheRedis->scan($cursor, 'MATCH', $pattern, 'COUNT', 100);
@@ -150,16 +148,16 @@ class CacheMonitorService
 
                 foreach ($found as $fullKey) {
                     $cleanKey = str_replace($cachePrefix, '', $fullKey);
-                    $label    = ($opts['labelFn'])($cleanKey);
-                    $ttl      = $cacheRedis->ttl($fullKey);
+                    $label = ($opts['labelFn'])($cleanKey);
+                    $ttl = $cacheRedis->ttl($fullKey);
 
                     $items[] = [
-                        'key'    => $cleanKey,
-                        'label'  => $label,
+                        'key' => $cleanKey,
+                        'label' => $label,
                         'exists' => true,
-                        'size'   => $this->formatBytes((int) $cacheRedis->strlen($fullKey)),
-                        'count'  => null,
-                        'ttl'    => $ttl > 0 ? $ttl : null,
+                        'size' => $this->formatBytes((int) $cacheRedis->strlen($fullKey)),
+                        'count' => null,
+                        'ttl' => $ttl > 0 ? $ttl : null,
                     ];
                 }
             }
@@ -207,24 +205,24 @@ class CacheMonitorService
             } else {
                 // Fallback for flat structure
                 foreach ($info as $key => $value) {
-                    if (str_starts_with($key, 'db') && preg_match('/keys=(\d+)/', (string)$value, $matches)) {
+                    if (str_starts_with($key, 'db') && preg_match('/keys=(\d+)/', (string) $value, $matches)) {
                         $totalKeys += (int) $matches[1];
                     }
                 }
             }
 
             return [
-                'memory_used'       => $this->formatBytes((int) ($info['used_memory'] ?? 0)),
-                'memory_peak'       => $this->formatBytes((int) ($info['used_memory_peak'] ?? 0)),
-                'keys'              => $totalKeys ?: '—',
-                'uptime_days'       => $info['uptime_in_days'] ?? '—',
+                'memory_used' => $this->formatBytes((int) ($info['used_memory'] ?? 0)),
+                'memory_peak' => $this->formatBytes((int) ($info['used_memory_peak'] ?? 0)),
+                'keys' => $totalKeys ?: '—',
+                'uptime_days' => $info['uptime_in_days'] ?? '—',
                 'connected_clients' => $info['connected_clients'] ?? '—',
-                'hits'              => $info['keyspace_hits'] ?? 0,
-                'misses'            => $info['keyspace_misses'] ?? 0,
-                'redis_version'     => $info['redis_version'] ?? '—',
-                'role'              => $info['role'] ?? '—',
-                'evicted_keys'      => $info['evicted_keys'] ?? 0,
-                'expired_keys'      => $info['expired_keys'] ?? 0,
+                'hits' => $info['keyspace_hits'] ?? 0,
+                'misses' => $info['keyspace_misses'] ?? 0,
+                'redis_version' => $info['redis_version'] ?? '—',
+                'role' => $info['role'] ?? '—',
+                'evicted_keys' => $info['evicted_keys'] ?? 0,
+                'expired_keys' => $info['expired_keys'] ?? 0,
             ];
         } catch (\Exception $e) {
             Log::error("Redis Info Error: " . $e->getMessage());
@@ -238,9 +236,9 @@ class CacheMonitorService
     private function getKeyTtl(string $key): ?int
     {
         try {
-            $prefix  = config('cache.prefix');
+            $prefix = config('cache.prefix');
             $fullKey = $prefix . $key;
-            $ttl     = Redis::connection('cache')->ttl($fullKey);
+            $ttl = Redis::connection('cache')->ttl($fullKey);
             return $ttl > 0 ? $ttl : null;
         } catch (\Exception $e) {
             return null;
@@ -280,9 +278,10 @@ class CacheMonitorService
 
     private function formatBytes(int $bytes): string
     {
-        if ($bytes === 0) return '0 B';
+        if ($bytes === 0)
+            return '0 B';
         $units = ['B', 'KB', 'MB', 'GB'];
-        $i     = floor(log($bytes, 1024));
+        $i = floor(log($bytes, 1024));
         return round($bytes / pow(1024, $i), 2) . ' ' . $units[$i];
     }
 }

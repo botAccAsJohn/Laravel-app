@@ -6,10 +6,10 @@
 
 @php
     $sortOptions = [
-        'newest' => 'Newest First',
-        'popularity' => 'Popularity (most sales)',
-        'price_low_high' => 'Price: Low to High',
-        'price_high_low' => 'Price: High to Low',
+        'newest' => __('products.sort_newest'),
+        'popularity' => __('products.sort_popularity'),
+        'price_low_high' => __('products.sort_price_low_high'),
+        'price_high_low' => __('products.sort_price_high_low'),
     ];
 
     $activeCount = collect([
@@ -28,13 +28,13 @@
         <div class="px-8 py-6 border-b border-slate-100 bg-slate-50/50">
             <div class="flex items-center justify-between gap-4">
                 <div>
-                    <h2 class="text-xl font-bold text-slate-900 tracking-tight">Filter Choice</h2>
-                    <p class="text-[11px] font-medium text-slate-500 uppercase tracking-widest mt-1">Refine your view</p>
+                    <h2 class="text-xl font-bold text-slate-900 tracking-tight">{{ __('products.filter_choice') }}</h2>
+                    <p class="text-[11px] font-medium text-slate-500 uppercase tracking-widest mt-1">{{ __('products.refine_view') }}</p>
                 </div>
 
                 @if($activeCount)
                     <div class="flex h-7 px-3 items-center justify-center rounded-full bg-indigo-600 text-[11px] font-bold text-white shadow-md shadow-indigo-200 animate-in zoom-in duration-300">
-                        {{ $activeCount }} Selected
+                        {{ __('products.selected_count', ['count' => $activeCount]) }}
                     </div>
                 @endif
             </div>
@@ -47,7 +47,7 @@
                     <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                     </svg>
-                    <label class="text-[12px] font-bold uppercase tracking-widest text-slate-500">Multiple Categories</label>
+                    <label class="text-[12px] font-bold uppercase tracking-widest text-slate-500">{{ __('products.multiple_categories') }}</label>
                 </div>
                 
                 <div class="grid grid-cols-1 gap-3 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
@@ -70,7 +70,7 @@
                     <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    <label class="text-[12px] font-bold uppercase tracking-widest text-slate-500">Status</label>
+                    <label class="text-[12px] font-bold uppercase tracking-widest text-slate-500">{{ __('products.status') }}</label>
                 </div>
                 
                 <div class="flex flex-col gap-3">
@@ -79,7 +79,7 @@
                             @checked($filters['in_stock'] ?? false)
                             class="peer h-5 w-5 rounded-md border-slate-200 text-indigo-600 focus:ring-indigo-500/20 transition-all cursor-pointer">
                         <span class="ml-3 text-sm font-semibold text-slate-600 group-hover:text-indigo-600 transition-colors peer-checked:text-indigo-600">
-                            In Stock Only
+                            {{ __('products.in_stock_only') }}
                         </span>
                     </label>
 
@@ -88,7 +88,7 @@
                             @checked($filters['on_sale'] ?? false)
                             class="peer h-5 w-5 rounded-md border-slate-200 text-indigo-600 focus:ring-indigo-500/20 transition-all cursor-pointer">
                         <span class="ml-3 text-sm font-semibold text-slate-600 group-hover:text-indigo-600 transition-colors peer-checked:text-indigo-600">
-                            On Sale (Discount)
+                            {{ __('products.on_sale_discount') }}
                         </span>
                     </label>
                 </div>
@@ -100,7 +100,7 @@
                     <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    <label class="text-[12px] font-bold uppercase tracking-widest text-slate-500">Price Range</label>
+                    <label class="text-[12px] font-bold uppercase tracking-widest text-slate-500">{{ __('products.price_range') }}</label>
                 </div>
 
                 <div class="grid grid-cols-2 gap-3">
@@ -140,7 +140,7 @@
                     <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
                     </svg>
-                    <label for="sort" class="text-[12px] font-bold uppercase tracking-widest text-slate-500">Sorting Strategy</label>
+                    <label for="sort" class="text-[12px] font-bold uppercase tracking-widest text-slate-500">{{ __('products.sorting_strategy') }}</label>
                 </div>
                 <div class="relative">
                     <select
@@ -166,19 +166,42 @@
                     type="submit"
                     class="h-12 w-full flex items-center justify-center rounded-xl bg-slate-900 border-2 border-slate-900 text-sm font-bold text-white shadow-lg shadow-slate-200 transition-all hover:bg-indigo-600 hover:border-indigo-600 active:scale-95"
                 >
-                    Update Results
+                    {{ __('products.update_results') }}
                 </button>
 
                 <a
                     href="{{ route('products.index') }}"
                     class="h-12 w-full flex items-center justify-center rounded-xl border-2 border-slate-100 bg-white text-sm font-bold text-slate-500 transition-all hover:border-rose-100 hover:bg-rose-50 hover:text-rose-500 active:scale-95"
                 >
-                    Reset Parameters
+                    {{ __('products.reset_params') }}
                 </a>
             </div>
         </form>
     </div>
 </aside>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const minPriceInput = document.getElementById('min_price');
+    const maxPriceInput = document.getElementById('max_price');
+
+    function validatePriceRange() {
+        const minPrice = parseFloat(minPriceInput.value) || 0;
+        const maxPrice = parseFloat(maxPriceInput.value);
+
+        if (!isNaN(maxPrice) && maxPriceInput.value !== '' && maxPrice < minPrice) {
+            maxPriceInput.classList.add('border-red-500', 'ring-red-100');
+            maxPriceInput.setCustomValidity('Maximum price cannot be less than minimum price');
+        } else {
+            maxPriceInput.classList.remove('border-red-500', 'ring-red-100');
+            maxPriceInput.setCustomValidity('');
+        }
+    }
+
+    minPriceInput.addEventListener('input', validatePriceRange);
+    maxPriceInput.addEventListener('input', validatePriceRange);
+});
+</script>
 
 
 

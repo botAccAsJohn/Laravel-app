@@ -14,10 +14,7 @@ class OrderStatusUpdated implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public function __construct(public Order $order)
-    {
-        //
-    }
+    public function __construct(public Order $order) {}
 
     /**
      * Broadcast on the private channel for this specific order.

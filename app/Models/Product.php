@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Facades\Log;
 
 use App\Collections\ProductCollection;
 
@@ -14,12 +13,6 @@ class Product extends Model
 {
     use HasFactory;
 
-    /**
-     * Create a new Eloquent Collection instance.
-     *
-     * @param  array  $models
-     * @return \App\Collections\ProductCollection
-     */
     public function newCollection(array $models = [])
     {
         return new ProductCollection($models);
@@ -37,14 +30,24 @@ class Product extends Model
         'image_path',
         'is_active',
         'quantity',
+        'average_rating',
+        'review_count',
     ];
 
     protected $casts = [
-        'price'          => 'decimal:2',
+        'price' => 'decimal:2',
         'discount_price' => 'decimal:2',
-        'tags'           => 'array',   // JSON column auto-encoded/decoded as PHP array
-        'is_active'      => 'boolean',
+        'tags' => 'array',   // JSON column auto-encoded/decoded as PHP array
+        'is_active' => 'boolean',
     ];
+
+    // ── Accessors ─────────────────────────────────────────────────────────────
+    public function getImageUrlAttribute(): string
+    {
+        return $this->image_path
+            ? asset('storage/' . $this->image_path)
+            : asset('storage/products/default.jpg');
+    }
 
     // ── Route model binding ───────────────────────────────────────────────────
     // Bind by slug instead of id: /products/running-shoes → WHERE slug = 'running-shoes'
@@ -58,6 +61,11 @@ class Product extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
+    }
+
+    public function reviews(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Review::class);
     }
 
 

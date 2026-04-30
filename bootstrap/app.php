@@ -14,8 +14,12 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__ . '/../routes/console.php',
         health: '/up',
     )
+    ->withEvents(discover: [
+        __DIR__ . '/../app/Listeners',
+    ])
     ->withMiddleware(function (Middleware $middleware): void {
 
+        $middleware->appendToGroup('web', \App\Http\Middleware\SetLocale::class);
         $middleware->appendToGroup('web', ReqContextMiddleware::class);
         $middleware->append(\App\Http\Middleware\LogRequestLifecycle::class);
         $middleware->appendToPriorityList(ReqContextMiddleware::class, 'auth');

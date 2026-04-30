@@ -62,8 +62,9 @@ class ImportProducts extends Command
 
             fclose($handle);
         })
-        ->chunk(500)
+        ->chunk(50)
         ->each(function (LazyCollection $chunk) use (&$metrics, $bar) {
+            DB::reconnect();
             DB::transaction(function () use ($chunk, &$metrics, $bar) {
                 foreach ($chunk as $row) {
                     $validator = Validator::make($row, [
@@ -90,7 +91,7 @@ class ImportProducts extends Command
                         'discount_price' => $row['discount_price'] ?? null,
                         'tags' => json_decode($row['tags'] ?? '[]', true),
                         'category_id' => $row['category_id'],
-                        'image_path' => ($row['image_path'] ?? null) ?: '/products/default.jpg',
+                        'image_path' => $row['image_path'] ?? null,
                         'is_active' => $row['is_active'] ?? true,
                         'quantity' => $row['quantity'] ?? 0,
                     ];

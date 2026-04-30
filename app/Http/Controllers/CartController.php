@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\Behavior\ProductAddToCart;
 use App\Exceptions\ProductOutOfStockException;
 use App\Services\CartService;
 use Illuminate\Support\Facades\Auth;
@@ -27,8 +28,8 @@ class CartController extends Controller
         $userId   = Auth::id();
         $quantity = (int) request('quantity', 1);
         try {
-            $product = $this->cartService->add($userId, $productId, $quantity);
-            return redirect()->back()->with('success', "{$product->name} added to cart.");
+            event(new ProductAddToCart($userId, $productId, $quantity));
+            return redirect()->back()->with('success', "Added to cart.");
         } catch (ProductOutOfStockException) {
             return redirect()->back()->with('error', 'Product not found.');
         }
