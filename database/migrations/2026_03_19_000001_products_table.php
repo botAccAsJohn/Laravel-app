@@ -6,13 +6,9 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    public function after(): array
-    {
-        return [
-            '2026_03_18_054023_create_categories_table',  // Updated timestamp!
-        ];
-    }
-
+    /**
+     * Run the migrations.
+     */
     public function up(): void
     {
         Schema::create('products', function (Blueprint $table) {
@@ -20,6 +16,8 @@ return new class extends Migration
             $table->string('name', 255);
             $table->text('description')->nullable();
             $table->integer('quantity')->default(0);
+            $table->decimal('average_rating', 3, 2)->default(0);
+            $table->unsignedInteger('review_count')->default(0);
             $table->decimal('price', 10, 2);
             $table->decimal('discount_price', 10, 2)->nullable();
             $table->json('tags')->nullable();
@@ -27,16 +25,20 @@ return new class extends Migration
             $table->foreignId('category_id')
                 ->nullable()
                 ->constrained('categories')
-                ->nullOnDelete()
-                ->index();
+                ->nullOnDelete();
 
             $table->string('slug', 255)->unique();
             $table->string('image_path')->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamps();
+
+            $table->index(['category_id', 'is_active', 'created_at']);
         });
     }
 
+    /**
+     * Reverse the migrations.
+     */
     public function down(): void
     {
         Schema::dropIfExists('products');

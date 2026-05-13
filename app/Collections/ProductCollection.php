@@ -33,4 +33,9 @@ class ProductCollection extends Collection
     {
         return (float) $this->sum(fn($product) => $product->quantity * $product->price);
     }
+
+    public function lowStock(int $threshold = 10): self
+    {
+        return $this->filter(fn($product) => $product->quantity <= $threshold);
+    }
 }

@@ -4,9 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Order extends Model
 {
+    use HasFactory;
     public const CREATED_AT = null;
 
     protected $fillable = [
@@ -20,6 +22,7 @@ class Order extends Model
         'discount_amount',
         'final_amount',
         'placed_at',
+        'invoice_path',
     ];
 
     protected $casts = [

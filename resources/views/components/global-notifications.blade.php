@@ -43,6 +43,7 @@ $userId = Auth::id();
                                 }
                             }).showToast();
                         }
+                        if (typeof window.bumpBadge === 'function') window.bumpBadge();
                     });
             } else {
                 // Customer: Listen for status updates on any of their orders

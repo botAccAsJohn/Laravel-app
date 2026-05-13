@@ -4,8 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Services\OrderService;
-use App\Events\OrderStatusUpdated;
 use Illuminate\Http\{RedirectResponse, Request};
+use App\Http\Requests\{StoreOrderRequest, UpdateOrderRequest};
 use Illuminate\Support\Facades\{Auth, Storage};
 use Illuminate\View\View;
 
@@ -27,16 +27,18 @@ class OrderController extends Controller
 
     /**
      * Display customer order insights and statistics.
-     * 
      * Uses Collection methods: count(), sum(), avg(), reject(), flatMap(), groupBy(), sortByDesc(), take()
      */
     public function analytics(): View
     {
         $user = Auth::user();
-        // Fetch all orders for the user with items
-        $orders = Order::with('items.product')
-            ->where('user_id', $user->id)
-            ->get();
+        
+        // If the user is an admin, show analytics for ALL orders. Otherwise, only their own.
+        $query = Order::with('items.product');
+        if ($user->role !== 'admin') {
+            $query->where('user_id', $user->id);
+        }
+        $orders = $query->get();
 
         // 1. General Metrics (Collection: reject, sum, avg)
         $processedOrders = $orders->reject(fn($o) => in_array($o->status, ['cancelled', 'pending']));
@@ -74,53 +76,26 @@ class OrderController extends Controller
 
     public function create(Request $request): View|RedirectResponse
     {
-        $couponCode = $request->query('coupon_code');
-        $summary = $this->service->cartSummary(Auth::id(), $couponCode);
+        $summary = $this->service->cartSummary(Auth::id(), $request->query('coupon_code'));
 
         if (empty($summary['cart'])) {
             return redirect()->route('cart.index')->with('warning', 'Your cart is empty. Add products before checkout.');
         }
 
-        if ($couponCode && !$summary['coupon']) {
+        if ($request->has('coupon_code') && !$summary['coupon']) {
             session()->flash('error', 'Invalid or expired coupon code.');
-        } elseif ($couponCode && $summary['coupon']) {
+        } elseif ($request->has('coupon_code') && $summary['coupon']) {
             session()->flash('success', 'Coupon code applied successfully!');
         }
 
-        return view('orders.create', array_merge($summary, ['applied_coupon' => $couponCode]));
+        return view('orders.create', array_merge($summary, [
+            'applied_coupon' => $summary['coupon']?->code ?? null
+        ]));
     }
 
-    // public function store(Request $request): RedirectResponse
-    // {
-    //     $validated = $request->validate([
-    //         'address' => ['required', 'string', 'max:255'],
-    //         'phone' => ['nullable', 'string', 'max:20'],
-    //         'payment_method' => ['required', 'in:card,upi,wallet,cod,emi,netbanking'],
-    //     ]);
-
-    //     // Compute summary once
-    //     $summary = $this->service->cartSummary(Auth::id());
-    //     if (empty($summary['cart'])) {
-    //         return redirect()->route('cart.index')->with('warning', 'Your cart is empty. Add products before checkout.');
-    //     }
-
-    //     try {
-    //         $order = $this->service->createFromCart(Auth::user(), $validated, $summary);
-    //         broadcast(new OrderPlaced($order))->toOthers();
-    //         return redirect()->route('orders.show', $order)->with('success', 'Order created successfully.');
-    //     } catch (\App\Exceptions\ProductOutOfStockException $e) {
-    //         return redirect()->route('cart.index')->with('error', $e->getMessage());
-    //     }
-    // }
-
-    public function store(Request $request): RedirectResponse
+    public function store(StoreOrderRequest $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'address' => ['required', 'string', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:20'],
-            'payment_method' => ['required', 'in:card,upi,wallet,cod,emi,netbanking'],
-            'coupon_code' => ['nullable', 'string', 'max:50'],
-        ]);
+        $validated = $request->validated();
 
         // Compute summary once — reuse for the empty-cart check AND for order creation
         $summary = $this->service->cartSummary(Auth::id(), $validated['coupon_code'] ?? null);
@@ -156,16 +131,10 @@ class OrderController extends Controller
         return view('orders.edit', compact('order'));
     }
 
-    public function update(Request $request, Order $order): RedirectResponse
+    public function update(UpdateOrderRequest $request, Order $order): RedirectResponse
     {
-        abort_unless(Auth::user()->role === 'admin', 403, 'Only admins can update orders.');
-
-        $validated = $request->validate([
-            'status' => ['required', 'in:pending,confirmed,processing,shipped,delivered,cancelled,refunded'],
-        ]);
-
+        $validated = $request->validated();
         $this->service->update($order, $validated);
-        broadcast(new OrderStatusUpdated($order));
 
         return redirect()->route('orders.index')->with('success', 'Order status updated.');
     }
@@ -209,10 +178,83 @@ class OrderController extends Controller
         return Storage::disk('public')->download($path, 'invoice-' . $order->id . '.pdf');
     }
 
+    /**
+     * Validate and apply coupon code via AJAX.
+     * Returns the updated order summary with coupon details.
+     */
+    public function validateCoupon(Request $request)
+    {
+        $validated = $request->validate([
+            'coupon_code' => ['required', 'string', 'max:50'],
+        ]);
+
+        try {
+            $summary = $this->service->cartSummary(Auth::id(), $validated['coupon_code']);
+
+            if (!$summary['coupon']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid or expired coupon code.',
+                ], 422);
+            }
+
+            if ($summary['coupon']) {
+                app(\App\Services\CartService::class)->applyCoupon(Auth::id(), $summary['coupon']->code);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Coupon applied successfully!',
+                'coupon' => [
+                    'code' => $summary['coupon']->code,
+                    'type' => $summary['coupon']->type,
+                    'value' => $summary['coupon']->value,
+                ],
+                'summary' => [
+                    'total_amount' => format_price($summary['total_amount']),
+                    'discount_amount' => format_price($summary['discount_amount'] - $summary['coupon_discount']),
+                    'coupon_discount' => format_price($summary['coupon_discount']),
+                    'final_amount' => format_price($summary['final_amount']),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred while validating the coupon.',
+            ], 500);
+        }
+    }
+
+    /**
+     * Remove the applied coupon and return updated summary.
+     */
+    public function removeCoupon(Request $request)
+    {
+        try {
+            app(\App\Services\CartService::class)->applyCoupon(Auth::id(), null);
+            $summary = $this->service->cartSummary(Auth::id());
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Coupon removed successfully.',
+                'summary' => [
+                    'total_amount' => format_price($summary['total_amount']),
+                    'discount_amount' => format_price($summary['discount_amount']),
+                    'coupon_discount' => format_price(0),
+                    'final_amount' => format_price($summary['final_amount']),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred while removing the coupon.',
+            ], 500);
+        }
+    }
+
     private function authorizeAccess(Order $order): void
     {
         $user = Auth::user();
-
         abort_unless($user->role === 'admin' || $order->user_id === $user->id, 403);
     }
 }

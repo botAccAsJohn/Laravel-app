@@ -24,6 +24,7 @@ class OrderStatusUpdated implements ShouldBroadcast
         return [
             new PrivateChannel('order.' . $this->order->id),
             new PrivateChannel('App.Models.User.' . $this->order->user_id),
+            new PrivateChannel('admin.orders'),
         ];
     }
 

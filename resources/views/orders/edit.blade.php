@@ -72,7 +72,7 @@
                     <div class="flex items-center gap-4 bg-gray-50 p-3 rounded-lg border">
                         <div class="flex-1">
                             <p class="font-medium text-gray-800">{{ $item->product ? $item->product->name : 'Product Default' }}</p>
-                            <p class="text-sm text-gray-500">Unit Price: Rs. {{ number_format((float)$item->unit_price, 2) }}</p>
+                            <p class="text-sm text-gray-500">Unit Price: @currency($item->unit_price)</p>
                         </div>
                         <div class="text-right">
                             <p class="text-sm text-gray-500 mb-1">Quantity</p>
@@ -87,17 +87,17 @@
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div class="rounded-lg bg-gray-50 border p-4">
                 <p class="text-sm text-gray-500">Total Amount</p>
-                <p class="text-lg font-semibold text-gray-800 mt-1">Rs. {{ number_format((float) $order->total_amount, 2) }}</p>
+                <p class="text-lg font-semibold text-gray-800 mt-1">@currency($order->total_amount)</p>
             </div>
 
             <div class="rounded-lg bg-gray-50 border p-4">
                 <p class="text-sm text-gray-500">Discount Amount</p>
-                <p class="text-lg font-semibold text-green-600 mt-1">Rs. {{ number_format((float) $order->discount_amount, 2) }}</p>
+                <p class="text-lg font-semibold text-green-600 mt-1">@currency($order->discount_amount)</p>
             </div>
 
             <div class="rounded-lg bg-gray-50 border p-4">
                 <p class="text-sm text-gray-500">Final Amount</p>
-                <p class="text-lg font-semibold text-indigo-700 mt-1">Rs. {{ number_format((float) $order->final_amount, 2) }}</p>
+                <p class="text-lg font-semibold text-indigo-700 mt-1">@currency($order->final_amount)</p>
             </div>
         </div>
 

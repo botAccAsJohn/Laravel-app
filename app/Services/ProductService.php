@@ -84,6 +84,7 @@ class ProductService
         $product = Product::create($validated);
 
         // Bust the "all products" list and count; individual cache doesn't exist yet.
+        // i think in future we can move to event !!!
         $this->forgetListCache();
 
         Log::channel('products')->info('Product created', [
@@ -261,6 +262,7 @@ class ProductService
         ];
 
         $products = $allProducts
+            ->where('is_active', true)
             // Category Filter (Multiple) - using filter()
             ->when(!empty($filters['categories']), function ($collection) use ($filters) {
                 return $collection->filter(fn($p) => in_array($p->category_id, $filters['categories']));

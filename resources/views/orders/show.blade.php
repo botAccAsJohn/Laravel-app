@@ -49,14 +49,14 @@
                 <h3 class="text-lg font-semibold text-gray-800 mb-3">Payment</h3>
                 <p class="text-gray-700">Method: <span class="font-medium">{{ strtoupper($order->payment_method ?? 'N/A') }}</span></p>
                 <div class="mt-2 space-y-1">
-                    <p class="text-sm text-gray-600">Subtotal: <span class="font-medium text-gray-800">Rs. {{ number_format((float) ($order->total_amount ?? 0), 2) }}</span></p>
+                    <p class="text-sm text-gray-600">Subtotal: <span class="font-medium text-gray-800">@currency($order->total_amount ?? 0)</span></p>
                     
                     @if($order->coupon_code)
                         <p class="text-sm text-indigo-600">Coupon: <span class="font-medium">[{{ $order->coupon_code }}]</span></p>
                     @endif
 
-                    <p class="text-sm text-green-600">Total Discount: <span class="font-medium">- Rs. {{ number_format((float) ($order->discount_amount ?? 0), 2) }}</span></p>
-                    <p class="text-lg font-bold text-gray-800 border-t pt-1 mt-1">Final Amount: <span class="text-green-600">Rs. {{ number_format((float) ($order->final_amount ?? 0), 2) }}</span></p>
+                    <p class="text-sm text-green-600">Total Discount: <span class="font-medium">- @currency($order->discount_amount ?? 0)</span></p>
+                    <p class="text-lg font-bold text-gray-800 border-t pt-1 mt-1">Final Amount: <span class="text-green-600">@currency($order->final_amount ?? 0)</span></p>
                 </div>
             </div>
         </div>
@@ -90,9 +90,9 @@
                             <p class="text-sm text-gray-500">Qty: {{ $item->quantity }}</p>
                         </div>
                         <div class="text-right">
-                            <p class="font-semibold text-gray-800">Rs. {{ number_format((float)$item->total_price, 2) }}</p>
+                            <p class="font-semibold text-gray-800">@currency($item->total_price)</p>
                             @if($item->discount_amount > 0)
-                                <p class="text-xs text-green-600">Saved Rs. {{ number_format((float)$item->discount_amount, 2) }}</p>
+                                <p class="text-xs text-green-600">Saved @currency($item->discount_amount)</p>
                             @endif
                         </div>
                     </div>

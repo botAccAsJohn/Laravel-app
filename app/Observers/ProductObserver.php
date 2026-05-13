@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\{Cache, Storage};
 
 class ProductObserver
 {
-    public function created(): void
+    public function created(Product $product): void
     {
         Cache::forget('products:all');
         Cache::forget('products:count');

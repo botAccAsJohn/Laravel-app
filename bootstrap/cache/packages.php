@@ -32,6 +32,13 @@
       0 => 'Laravel\\Sail\\SailServiceProvider',
     ),
   ),
+  'laravel/slack-notification-channel' => 
+  array (
+    'providers' => 
+    array (
+      0 => 'Illuminate\\Notifications\\SlackChannelServiceProvider',
+    ),
+  ),
   'laravel/tinker' => 
   array (
     'providers' => 

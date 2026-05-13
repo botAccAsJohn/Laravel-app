@@ -21,16 +21,17 @@ class SendOrderPlacedMail extends Mailable implements ShouldQueue
     /**
      * Create a new message instance.
      */
-    public function __construct($order, $invoicePath)
+    public function __construct($order = null)
     {
-        $this->invoicePath = $invoicePath;
         if ($order) {
-            $this->customerName = $order->user->name ?? 'Customer';
+            $this->invoicePath = $order->invoice_path;
+            $this->customerName = $order->user?->name ?? 'Customer';
             $this->orderTotal  = $order->total_amount ?? 0;
             $this->itemsCount  = $order->items ? $order->items->count() : 0;
             $this->orderId     = $order->id ?? 'Unknown';
         } else {
             // Dummy data for testing the UI
+            $this->invoicePath = null;
             $this->customerName = 'John Doe';
             $this->orderTotal  = 249.50;
             $this->itemsCount  = 3;
@@ -66,8 +67,12 @@ class SendOrderPlacedMail extends Mailable implements ShouldQueue
      */
     public function attachments(): array
     {
-        return [
-            Attachment::fromStorageDisk('public', $this->invoicePath),
-        ];
+        if ($this->invoicePath) {
+            return [
+                Attachment::fromStorageDisk('public', $this->invoicePath),
+            ];
+        }
+        
+        return [];
     }
 }

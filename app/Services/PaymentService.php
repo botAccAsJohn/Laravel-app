@@ -6,6 +6,6 @@ class PaymentService
 {
     public function charge(int $amount): string
     {
-        return "Charged ₹{$amount}";
+        return "Charged " . config('app.currency') . " {$amount}";
     }
 }

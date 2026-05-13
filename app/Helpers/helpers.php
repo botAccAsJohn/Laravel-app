@@ -5,8 +5,7 @@ use Illuminate\Support\Number;
 if (! function_exists('format_price')) {
     function format_price(int|float $amount): string
     {
-        $currency = config('app.currency', 'USD');
-        return Number::currency($amount, in: $currency);
+        return Number::currency($amount);
     }
 }
 

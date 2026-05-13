@@ -25,7 +25,7 @@ class SendOrderConfirmationMail extends Mailable implements ShouldQueue
     public function __construct($order = null)
     {
         if ($order) {
-            $this->customerName = $order->user->name ?? 'Customer';
+            $this->customerName = $order->user?->name ?? 'Customer';
             $this->orderTotal  = $order->total_amount ?? 0;
             $this->itemsCount  = $order->items ? $order->items->count() : 0;
             $this->orderId     = $order->id ?? 'Unknown';

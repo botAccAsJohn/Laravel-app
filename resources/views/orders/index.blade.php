@@ -11,6 +11,7 @@
             </div>
 
             <div class="flex items-center gap-3">
+                @if(Auth::user()->role === 'admin')
                 <a href="{{ route('orders.analytics') }}"
                     class="inline-flex items-center justify-center bg-white text-indigo-700 border border-indigo-100 px-4 py-2 rounded-lg hover:bg-indigo-50 transition font-bold shadow-sm">
                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -18,6 +19,7 @@
                     </svg>
                     View Order Insights
                 </a>
+                @endif
                 <a href="{{ route('orders.create') }}"
                     class="inline-flex items-center justify-center bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition font-bold shadow-sm">
                     Create New Order
@@ -87,12 +89,11 @@
 
                                     </td>
                                     <td class="px-6 py-4 align-top">
-                                        <div class="text-sm font-semibold text-gray-800">Rs.
-                                            {{ number_format((float) ($order->final_amount ?? 0), 2) }}</div>
+                                        <div class="text-sm font-semibold text-gray-800">@currency($order->final_amount ?? 0)</div>
                                         <div class="text-xs text-gray-500">
-                                            Total: Rs. {{ number_format((float) ($order->total_amount ?? 0), 2) }}
+                                            Total: @currency($order->total_amount ?? 0)
                                             @if(($order->discount_amount ?? 0) > 0)
-                                                | Discount: Rs. {{ number_format((float) $order->discount_amount, 2) }}
+                                                | Discount: @currency($order->discount_amount)
                                             @endif
                                         </div>
                                     </td>

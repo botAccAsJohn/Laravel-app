@@ -12,5 +12,12 @@
     "Shopping Cart": "शॉपिंग कार्ट",
     "Proceed to Buy": "खरीदने के लिए आगे बढ़ें",
     "Welcome": "स्वागत है",
-    "Welcome, :name": "आपका स्वागत है, :name"
+    "Welcome, :name": "आपका स्वागत है, :name",
+    "New Order Received": "नया ऑर्डर प्राप्त हुआ",
+    "Order Shipped": "ऑर्डर भेज दिया गया है",
+    "Your Order Has Shipped!": "आपका ऑर्डर भेज दिया गया है!",
+    "View Order": "ऑर्डर देखें",
+    "Hello :name, your order #:number has been shipped.": "नमस्ते :name, आपका ऑर्डर #:number भेज दिया गया है।",
+    "Thank you for shopping with us!": "हमारे साथ खरीदारी करने के लिए धन्यवाद!",
+    "Order Confirmation - #:number": "ऑर्डर पुष्टिकरण - #:number"
 }

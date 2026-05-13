@@ -23,7 +23,7 @@ class SetLocale
         if ($request->has('lang')) {
             $lang = $request->query('lang');
             $supported = ['en', 'hi', 'ar'];
-            
+
             if (in_array($lang, $supported)) {
                 Session::put('locale', $lang);
                 if ($user = $request->user()) {
@@ -35,7 +35,7 @@ class SetLocale
 
         // 2. Resolve active locale based on priority chain
         $user = $request->user();
-        
+
         if (Session::has('locale')) {
             $locale = Session::get('locale');
         } elseif ($user && $user->preferred_locale) {
@@ -50,6 +50,11 @@ class SetLocale
         // 4. Configure Carbon and Number helper for the active locale
         \Carbon\Carbon::setLocale($locale);
         \Illuminate\Support\Number::useLocale($locale);
+        // \Illuminate\Support\Number::useCurrency($locale);
+
+        //write the arr of currcy code that make the changes in the useCurrency
+        $currency = ['en' => 'USD', 'hi' => 'INR', 'ar' => 'AED'];
+        \Illuminate\Support\Number::useCurrency($currency[$locale]);
 
         return $next($request);
     }

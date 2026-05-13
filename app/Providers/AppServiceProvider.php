@@ -49,14 +49,7 @@ class AppServiceProvider extends ServiceProvider
             $view->with('user', Auth::user());
         });
         Blade::directive('currency', function ($amount) {
-            return "<?php 
-                \$currency = match(App::getLocale()) {
-                    'hi' => 'INR',
-                    'ar' => 'SAR',
-                    default => 'USD'
-                };
-                echo \Illuminate\Support\Number::currency($amount ?? 0, in: \$currency); 
-            ?>";
+            return "<?php echo format_price($amount ?? 0); ?>";
         });
         Response::macro('success', function ($data) {
             return response()->json([
@@ -81,6 +74,11 @@ class AppServiceProvider extends ServiceProvider
 
         if ($this->app->environment('local')) {
             Mail::alwaysTo(config('mail.admin_email'));
+        }
+
+        // Set default Slack webhook route for notifications
+        if (config('services.slack.notifications.bot_user_oauth_token')) {
+            \Illuminate\Support\Facades\Notification::route('slack', config('services.slack.notifications.bot_user_oauth_token'));
         }
 
         // Add Collection macro for manual pagination

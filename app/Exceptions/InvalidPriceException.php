@@ -39,7 +39,7 @@ class InvalidPriceException extends Exception
 
         return redirect()
             ->back()
-            ->with('error', "Invalid price ₹{$this->price}: {$this->reason}")
+            ->with('error', "Invalid price " . config('app.currency') . " {$this->price}: {$this->reason}")
             ->withInput();
     }
 }

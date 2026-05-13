@@ -2,16 +2,13 @@
 
 namespace App\Listeners\Behavior;
 
-use App\Events\Behavior\ProductViewed;
 use Illuminate\Support\Facades\Log;
 use App\Services\RecentlyViewServices;
 
 
 class ProductViewedListener
 {
-    public function __construct(private RecentlyViewServices $recentlyViewServices)
-    {
-    }
+    public function __construct(private RecentlyViewServices $recentlyViewServices) {}
 
     public function handle(object $event): void
     {

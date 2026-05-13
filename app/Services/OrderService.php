@@ -28,8 +28,13 @@ class OrderService
         // Use calcTotal() with pre-fetched data — no extra Redis/cache reads
         $finalAmount = $this->cartService->calcTotal($cart, $cartModels);
         $totalAmount = 0.0;
+        $couponCode = $couponCode ?? $this->cartService->getAppliedCoupon($userId);
 
         foreach ($cart as $productId => $item) {
+            // Skip Redis metadata keys (starting with _)
+            if (is_string($productId) && str_starts_with($productId, '_')) {
+                continue;
+            }
             $model = $cartModels[$productId] ?? null;
             $originalPrice = (float) ($item['price'] ?? 0);
             $quantity = (int) ($item['quantity'] ?? 0);
@@ -72,6 +77,12 @@ class OrderService
         $couponCode = $data['coupon_code'] ?? null;
         $summary = $summary ?? $this->cartSummary($user->id, $couponCode);
 
+        return $this->processOrderCreation($user, $data, $summary);
+    }
+
+
+    private function processOrderCreation(User $user, array $data, array $summary): Order
+    {
         return retry(3, function () use ($user, $data, $summary) {
             return DB::transaction(function () use ($user, $data, $summary) {
                 $order = tap(Order::create([
@@ -85,11 +96,13 @@ class OrderService
                     'discount_amount' => $summary['discount_amount'],
                     'final_amount' => $summary['final_amount'],
                     'placed_at' => now(),
-                ]), function ($order) {
-                    Log::channel('orders')->info("Order Initialized: #{$order->id}");
+                ]), function ($order) use ($user) {
+                    Log::channel('orders')->info("Order Initialized: #{$order->id} for User #{$user->id}");
                 });
 
                 foreach ($summary['cart'] as $productId => $item) {
+                    if (is_string($productId) && str_starts_with($productId, '_')) continue;
+
                     $model = $summary['cartModels'][$productId] ?? null;
                     $originalPrice = (float) ($item['price'] ?? 0);
                     $quantity = (int) ($item['quantity'] ?? 0);
@@ -105,11 +118,8 @@ class OrderService
                         }
 
                         $originalPrice = (float) $model->price;
-                        $model->quantity = $model->quantity - $quantity;
-                        $model->save();
-
-                        broadcast(new \App\Events\ProductStockChanged($model->id, $model->quantity));
-                        \Illuminate\Support\Facades\Cache::forget(\App\Models\Product::CACHE_KEY_SINGLE . $model->slug);
+                        // Stock deduction is handled by UpdateInventoryListener
+                        // (triggered by the OrderPlaced event below)
                     }
 
                     $discountedPrice = (float) ($item['price'] ?? 0);
@@ -123,14 +133,19 @@ class OrderService
                         'total_price' => $discountedPrice * $quantity,
                     ]);
                 }
-                $this->cartService->clear($user->id);
+
+                if ($user) {
+                    $this->cartService->clear($user->id);
+                }
 
                 if ($summary['coupon']) {
                     $summary['coupon']->increment('used_count');
                 }
 
-                Log::channel('orders')->info("Order #{$order->id} finalized for User #{$user->id}");
+                Log::channel('orders')->info("Order #{$order->id} finalized");
 
+                // All side-effects (invoice, inventory, notifications) are
+                // handled by listeners on this event — see EventServiceProvider.
                 event(new \App\Events\Orders\OrderPlaced($order));
 
                 return $order;
@@ -145,11 +160,13 @@ class OrderService
                 $oldStatus = $order->status;
                 $order->update(['status' => $data['status']]);
 
-                Log::channel('orders')->info("Order #{$order->id} status updated", [
+                \Illuminate\Support\Facades\Log::channel('orders')->info("Order #{$order->id} status updated", [
                     'old_status' => $oldStatus,
                     'new_status' => $data['status'],
-                    'updated_by' => Auth::id()
+                    'updated_by' => \Illuminate\Support\Facades\Auth::id()
                 ]);
+
+                // Broadcast + event dispatch is handled by OrderObserver::updated()
             }
 
             return $order->refresh();

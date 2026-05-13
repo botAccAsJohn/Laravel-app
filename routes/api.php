@@ -1,6 +1,8 @@
 <?php
 
+use App\Models\Order;
 use App\Models\Product;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\{Route, Log, File, Http, URL, Mail};
 
@@ -119,9 +121,7 @@ Route::get('/unsubscribe/{user}', function (Request $request, $user) {
     return "User {$user} unsubscribed successfully";
 })->name('unsubscribe');
 
-
-Route::get('/test-mail', function () {
-    Mail::to(['nothing@gmail.com'])->send(new \App\Mail\ProductStockLowMail(
-        Product::find(1),
-    ));
-});
+// ── Slack Interactions (Exercise 39.4) ──────────────────────────────
+Route::post('/slack/interactions', [\App\Http\Controllers\Api\SlackInteractionController::class, 'handle'])
+    ->middleware(\App\Http\Middleware\VerifySlackSignature::class)
+    ->name('slack.interactions');
