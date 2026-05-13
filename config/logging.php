@@ -81,7 +81,7 @@ return [
             'driver' => 'daily',
             'path' => storage_path('logs/laravel.log'),
             'level' => env('LOG_LEVEL', 'debug'),
-            'days' => env('LOG_DAILY_DAYS', 7),
+            'days' => env('LOG_DAILY_DAYS', 3),
             'replace_placeholders' => true,
         ],
 
@@ -134,28 +134,28 @@ return [
             'driver' => 'daily',
             'path' => storage_path('logs/orders/orders.log'),
             'level' => 'debug',
-            'days' => 7,
+            'days' => 3,
         ],
 
         'products' => [
             'driver' => 'daily',
             'path' => storage_path('logs/products/products.log'),
             'level' => 'debug',
-            'days' => 7,
+            'days' => 3,
         ],
 
         'cart' => [
             'driver' => 'daily',
             'path' => storage_path('logs/cart/cart.log'),
             'level' => 'debug',
-            'days' => 7,
+            'days' => 3,
         ],
 
         'DBInteraction' => [
             'driver' => 'daily',
             'path' => storage_path('logs/db/db.log'),
             'level' => 'debug',
-            'days' => 7,
+            'days' => 3,
         ],
         'RedisInteraction' => [
             'driver' => 'daily',
@@ -166,6 +166,12 @@ return [
         'Events' => [
             'driver' => 'daily',
             'path' => storage_path('logs/events/events.log'),
+            'level' => 'debug',
+            'days' => 3,
+        ],
+        'Mail' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/mail/mail.log'),
             'level' => 'debug',
             'days' => 3,
         ],

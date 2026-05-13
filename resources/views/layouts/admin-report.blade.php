@@ -93,7 +93,7 @@
     @if($type === 'sales')
         <div class="summary-box">
             <h3>Executive Summary</h3>
-            <p>Total Revenue: <span class="price">₹{{ number_format($data['total_revenue'], 2) }}</span></p>
+            <p>Total Revenue: <span class="price">{{ format_price($data['total_revenue']) }}</span></p>
             <p>Total Orders (Delivered): <strong>{{ $data['order_count'] }}</strong></p>
         </div>
 
@@ -119,7 +119,7 @@
     @if($type === 'inventory')
         <div class="summary-box">
             <h3>Inventory Status</h3>
-            <p>Total Inventory Value: <span class="price">₹{{ number_format($data['total_value'], 2) }}</span></p>
+            <p>Total Inventory Value: <span class="price">{{ format_price($data['total_value']) }}</span></p>
             <p>Out of Stock Items: <strong style="color: #c0392b;">{{ $data['out_of_stock'] }}</strong></p>
             <p>Low Stock Alerts: <strong>{{ count($data['low_stock_items']) }}</strong></p>
         </div>
@@ -167,7 +167,7 @@
                 @foreach($data['top_buyers'] as $buyer)
                     <tr>
                         <td>{{ $buyer['name'] }}</td>
-                        <td><span class="price">₹{{ number_format($buyer['spent'], 2) }}</span></td>
+                        <td><span class="price">{{ format_price($buyer['spent']) }}</span></td>
                     </tr>
                 @endforeach
             </tbody>

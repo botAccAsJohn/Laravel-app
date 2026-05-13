@@ -45,9 +45,6 @@ class Product2Controller extends Controller
 
     public function show(Product $product): View
     {
-        // if (Auth::check()) {
-        //     $this->recentService->record(Auth::id(), $product->id);
-        // }
         $product->load(['reviews' => function ($query) {
             $query->latest()->take(5);
         }, 'reviews.user']);

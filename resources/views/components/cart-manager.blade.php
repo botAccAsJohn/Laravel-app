@@ -17,8 +17,8 @@ new class extends Component
         $cartService = app(CartService::class);
         $rawCart = $cartService->get($userId) ?? [];
 
-        // Filter out metadata keys like _last_activity_at to avoid errors in loops
-        $cart = array_filter($rawCart, fn($k) => $k !== '_last_activity_at', ARRAY_FILTER_USE_KEY);
+        // Filter out metadata keys starting with _ to avoid errors in loops
+        $cart = array_filter($rawCart, fn($k) => !str_starts_with($k, '_'), ARRAY_FILTER_USE_KEY);
 
         return [
             'cart'       => $cart,
@@ -174,17 +174,17 @@ new class extends Component
                                 @endphp
 
                                 @if($model && $model->discount_price)
-                                    <div class="text-xs text-gray-400 line-through">₹{{ number_format($item['price'], 2) }}</div>
-                                    <div class="font-bold text-lg text-green-600">₹{{ number_format($model->discount_price, 2) }}</div>
+                                    <div class="text-xs text-gray-400 line-through">@currency($item['price'])</div>
+                                    <div class="font-bold text-lg text-green-600">@currency($model->discount_price)</div>
                                     <div class="text-xs text-green-700 font-medium">
                                         {{ round((1 - $model->discount_price / $item['price']) * 100) }}% off
                                     </div>
                                 @else
-                                    <span class="font-bold text-lg text-gray-900">₹{{ number_format($item['price'], 2) }}</span>
+                                    <span class="font-bold text-lg text-gray-900">@currency($item['price'])</span>
                                 @endif
 
                                 @if($item['quantity'] > 1)
-                                    <div class="text-xs text-gray-500 mt-1">× {{ $item['quantity'] }} = ₹{{ number_format($lineTotal, 2) }}</div>
+                                    <div class="text-xs text-gray-500 mt-1">× {{ $item['quantity'] }} = @currency($lineTotal)</div>
                                 @endif
                             </div>
                         </div>
@@ -193,7 +193,7 @@ new class extends Component
                     <div class="flex justify-end pt-4 mt-2">
                         <p class="text-lg">
                             {{ trans_choice('cart.subtotal', count($cart), ['count' => count($cart)]) }}
-                            <span class="font-bold text-gray-900">₹{{ number_format($total, 2) }}</span>
+                            <span class="font-bold text-gray-900">@currency($total)</span>
                         </p>
                     </div>
 
@@ -224,7 +224,7 @@ new class extends Component
 
                     <p class="text-lg mb-2">
                         {{ trans_choice('cart.subtotal', count($cart), ['count' => count($cart)]) }}
-                        <span class="font-bold text-gray-900">₹{{ number_format($total, 2) }}</span>
+                        <span class="font-bold text-gray-900">@currency($total)</span>
                     </p>
                     
                     <div class="flex items-center text-sm text-gray-700 mb-4">

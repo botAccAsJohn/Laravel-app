@@ -275,7 +275,7 @@
                             console.log('New order received:', data);
                             addOrderToFeed(data);
                             Toastify({
-                                text: `✨ NEW ORDER RECEIVED\n#${data.orderId} by ${data.customerName}\nValue: ₨ ${parseFloat(data.orderTotal).toFixed(2)}`,
+                                text: `✨ NEW ORDER RECEIVED\n#${data.orderId} by ${data.customerName}\nValue: {{ config('app.currency') }} ${parseFloat(data.orderTotal).toFixed(2)}`,
                                 duration: 8000,
                                 gravity: 'top',
                                 position: 'right',
@@ -372,7 +372,7 @@
                         </div>
                         <div>
                             <p class="font-black text-gray-900 group-hover:text-indigo-600 transition-colors">${data.customerName}</p>
-                            <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">${data.itemsCount} Products | Total ₹${data.orderTotal}</p>
+                            <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">${data.itemsCount} Products | Total {{ config('app.currency') }}${data.orderTotal}</p>
                         </div>
                     </div>
                     <div class="flex items-center gap-3">

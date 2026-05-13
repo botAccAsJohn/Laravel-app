@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\{ProfileController, Product2Controller, CacheMonitorController, CartController, OrderController, RecentlyViewController, ReviewController, LocaleController};
+use App\Http\Controllers\{ProfileController, Product2Controller, CacheMonitorController, CartController, OrderController, RecentlyViewController, ReviewController, LocaleController, NotificationController};
 use App\Http\Controllers\Admin\{ReportManagerController, SalesAnalyticsController};
 use App\Services\CacheMonitorService;
 use Illuminate\Support\Facades\{Route, Auth};
@@ -9,7 +9,7 @@ Route::post('/locale', [LocaleController::class, 'switch'])->name('locale.switch
 
 Route::get('/', function () {
     return view('welcome');
-});
+})->name('welcome');
 
 Route::get('/dashboard', function (CacheMonitorService $monitor) {
     if (Auth::user()->role !== 'admin') {
@@ -41,6 +41,10 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/admin/reports', [ReportManagerController::class, 'index'])->name('admin.reports.index');
         Route::post('/admin/reports/archive', [ReportManagerController::class, 'archive'])->name('admin.reports.archive');
         Route::post('/admin/reports/cleanup', [ReportManagerController::class, 'bulkCleanup'])->name('admin.reports.cleanup');
+
+        // Admin Alerts
+        Route::get('/admin/alerts', [\App\Http\Controllers\Admin\AdminAlertController::class, 'index'])->name('admin.alerts.index');
+        Route::post('/admin/alerts', [\App\Http\Controllers\Admin\AdminAlertController::class, 'store'])->name('admin.alerts.store');
     });
     Route::resource('products', Product2Controller::class)->only(['index', 'show']);
 
@@ -53,6 +57,10 @@ Route::middleware(['auth'])->group(function () {
 
     // Order Cancel Route
     Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
+
+    // Coupon Routes
+    Route::post('/orders/coupon/validate', [OrderController::class, 'validateCoupon'])->name('coupon.validate');
+    Route::post('/orders/coupon/remove', [OrderController::class, 'removeCoupon'])->name('coupon.remove');
 
     // Recently Viewed Routes
     Route::get('/recently-viewed', [RecentlyViewController::class, 'index'])->name('recently.index');
@@ -68,8 +76,24 @@ Route::middleware(['auth'])->group(function () {
 
     // Reviews Route
     Route::post('/products/{product}/reviews', [ReviewController::class, 'store'])->name('reviews.store');
+
+    // Notifications Routes
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('/notifications/unread', [NotificationController::class, 'unread'])->name('notifications.unread');
+    Route::get('/notifications/{id}', [NotificationController::class, 'show'])->name('notifications.show');
+    Route::post('/notifications/mark-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.markAllAsRead');
+    Route::patch('/notifications/{id}/read', [NotificationController::class, 'update'])->name('notifications.markAsRead');
 });
+
 
 Route::get('/export-products', [Product2Controller::class, 'exportProducts'])->name('products.export');
 
+
+// Route::get('/test-slack', function () {
+//     $order = \App\Models\Order::find(2);
+//     dump($order);
+//     \Illuminate\Support\Facades\Notification::send(\App\Models\User::find(2), new \App\Notifications\NewOrderReceived($order));
+//     dump("here !!");
+//     return "Notification sent successfully.....ssd";
+// });
 require __DIR__ . '/auth.php';

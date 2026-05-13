@@ -15,6 +15,8 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('role')->default('user'); // 'admin' or 'user'
+            $table->string('preferred_locale')->default('en');
+            $table->string('webhook_url')->nullable();
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');

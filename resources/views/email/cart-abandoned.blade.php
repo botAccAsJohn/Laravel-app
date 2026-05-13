@@ -42,7 +42,7 @@
                     <span style="color: #64748b; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; display: block; margin-bottom: 20px;">Your Selection ({{ $itemCount }} {{ \Illuminate\Support\Str::plural('item', $itemCount) }})</span>
                     
                     @foreach($cartItems as $productId => $item)
-                        @if($productId === '_last_activity_at') @continue @endif
+                        @if(is_string($productId) && str_starts_with($productId, '_')) @continue @endif
                         @php
                             $model = $cartModels[$productId] ?? null;
                             $image = $model && $model->image_url ? asset('storage/' . $model->image_url) : 'https://via.placeholder.com/100';
@@ -54,10 +54,10 @@
                             </td>
                             <td style="padding-left: 16px; vertical-align: middle;">
                                 <div style="color: #0f172a; font-size: 16px; font-weight: 600;">{{ $item['name'] }}</div>
-                                <div style="color: #64748b; font-size: 14px;">Qty: {{ $item['quantity'] }} × ${{ number_format($item['price'], 2) }}</div>
+                                <div style="color: #64748b; font-size: 14px;">Qty: {{ $item['quantity'] }} × @currency($item['price'])</div>
                             </td>
                             <td align="right" style="vertical-align: middle;">
-                                <span style="color: #0f172a; font-size: 16px; font-weight: 700;">${{ number_format($item['price'] * $item['quantity'], 2) }}</span>
+                                <span style="color: #0f172a; font-size: 16px; font-weight: 700;">@currency($item['price'] * $item['quantity'])</span>
                             </td>
                           </tr>
                         </table>
@@ -74,7 +74,7 @@
                             <span style="color: #0f172a; font-size: 18px; font-weight: 700;">Total</span>
                         </td>
                         <td align="right">
-                            <span style="color: #4f46e5; font-size: 22px; font-weight: 800;">${{ number_format($cartTotal, 2) }}</span>
+                            <span style="color: #4f46e5; font-size: 22px; font-weight: 800;">@currency($cartTotal)</span>
                         </td>
                       </tr>
                     </table>

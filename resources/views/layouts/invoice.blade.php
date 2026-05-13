@@ -227,8 +227,8 @@
         <tr>
             <td>{{ $item['description'] ?? 'N/A' }}</td>
             <td class="text-center">{{ $item['quantity'] ?? 0 }}</td>
-            <td class="text-center">${{ number_format($item['unit_price'] ?? 0, 2) }}</td>
-            <td class="text-center">${{ number_format(($item['quantity'] ?? 0) * ($item['unit_price'] ?? 0), 2) }}</td>
+            <td class="text-center">@currency($item['unit_price'] ?? 0)</td>
+            <td class="text-center">@currency(($item['quantity'] ?? 0) * ($item['unit_price'] ?? 0))</td>
         </tr>
         @endforeach
 
@@ -272,7 +272,7 @@
                     </tr>
                     <tr>
                         <td class="summary-label">Sales Tax:</td>
-                        <td class="summary-value">${{ number_format($invoice['sales_tax'] ?? 0, 2) }}</td>
+                        <td class="summary-value">@currency($invoice['sales_tax'] ?? 0)</td>
                     </tr>
                 </table>
             </td>
@@ -282,16 +282,16 @@
                 <table>
                     <tr>
                         <td class="summary-label">Subtotal:</td>
-                        <td class="summary-value">${{ number_format($invoice['subtotal'] ?? 0, 2) }}</td>
+                        <td class="summary-value">@currency($invoice['subtotal'] ?? 0)</td>
                     </tr>
                     <tr>
                         <td class="summary-label">Shipping Charges:</td>
-                        <td class="summary-value">${{ number_format($invoice['shipping_charges'] ?? 0, 2) }}</td>
+                        <td class="summary-value">@currency($invoice['shipping_charges'] ?? 0)</td>
                     </tr>
                     <tr>
                         <td class="summary-label font-bold uppercase">TOTAL:</td>
                         <td class="summary-value font-bold" style="border-bottom: 2px solid #ccc;">
-                            ${{ number_format($invoice['total'] ?? 0, 2) }}
+                            @currency($invoice['total'] ?? 0)
                         </td>
                     </tr>
                 </table>

@@ -2,29 +2,33 @@
 
 namespace App\Listeners\Inventory;
 
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Queue\InteractsWithQueue;
-
 use App\Events\Inventory\ProductStockLow;
-use App\Mail\ProductStockLowMail;
-use Illuminate\Support\Facades\Mail;
+use App\Models\User;
+use App\Notifications\ProductLowStock;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Notification;
 
-class ProductStockLowListener
+class ProductStockLowListener implements ShouldQueue
 {
-    /**
-     * Create the event listener.
-     */
-    public function __construct()
-    {
-        //
-    }
+    public $queue = 'emails';
+    public $tries = 3;
+    public $backoff = [10, 30, 60];
 
-    /**
-     * Handle the event.
-     */
     public function handle(object $event): void
     {
-        // Send email to admin
-        Mail::to(env('ADMIN_EMAIL'))->send(new ProductStockLowMail($event->product));
+        $product = $event->product;
+
+        $key = "stock_low_alert_{$product->id}";
+
+        // Only allow once per hour
+        if (Cache::has($key)) {
+            return; // already sent within last hour
+        }
+
+        Cache::put($key, true, now()->addHour());
+
+        $admins = User::where('role', 'admin')->get();
+        Notification::send($admins, new ProductLowStock($product));
     }
 }

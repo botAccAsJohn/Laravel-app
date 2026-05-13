@@ -2,13 +2,9 @@
 
 namespace App\Listeners\Behavior;
 
-
-
 class RecalculateProductRating
 {
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     public function handle(object $event): void
     {

@@ -2,11 +2,9 @@
 
 namespace App\Console\Commands;
 
-use App\Models\Product;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\LazyCollection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\LazyCollection;
 
 class ImportProducts extends Command
 {
@@ -18,138 +16,263 @@ class ImportProducts extends Command
     protected $signature = 'app:import-products {file : Path to the CSV file}';
 
     /**
-     * The description of the console command.
+     * The console command description.
      *
      * @var string
      */
-    protected $description = 'Import products from a CSV file using LazyCollection for memory efficiency';
+    protected $description = 'Fast PostgreSQL product importer using bulk upserts';
 
     /**
      * Execute the console command.
      */
-    public function handle()
+    public function handle(): int
     {
         $filePath = $this->argument('file');
 
         if (!file_exists($filePath)) {
-            $this->error("File not found: $filePath");
-            return 1;
+            $this->error("File not found: {$filePath}");
+            return self::FAILURE;
         }
 
-        $this->info("Starting import from $filePath...");
+        $this->info("Starting import from: {$filePath}");
+
+        DB::disableQueryLog();
 
         $metrics = [
-            'created' => 0,
-            'updated' => 0,
+            'processed' => 0,
             'errors' => 0,
         ];
 
         $startTime = microtime(true);
         $initialMemory = memory_get_usage();
 
-        // Count total lines for progress bar (excluding header)
-        $totalLines = $this->countLines($filePath) - 1;
+        // Count total rows (excluding header)
+        $totalLines = max($this->countLines($filePath) - 1, 0);
+
         $bar = $this->output->createProgressBar($totalLines);
         $bar->start();
 
-        LazyCollection::make(function () use ($filePath) {
-            $handle = fopen($filePath, 'r');
-            $header = fgetcsv($handle);
+        /*
+        |--------------------------------------------------------------------------
+        | Preload category IDs
+        |--------------------------------------------------------------------------
+        |
+        | Avoid running:
+        | exists:categories,id
+        |
+        | for every single row.
+        |
+        */
 
-            while (($row = fgetcsv($handle)) !== false) {
-                yield array_combine($header, $row);
-            }
+        $validCategoryIds = DB::table('categories')
+            ->pluck('id')
+            ->flip()
+            ->toArray();
 
-            fclose($handle);
-        })
-        ->chunk(50)
-        ->each(function (LazyCollection $chunk) use (&$metrics, $bar) {
-            DB::reconnect();
-            DB::transaction(function () use ($chunk, &$metrics, $bar) {
-                foreach ($chunk as $row) {
-                    $validator = Validator::make($row, [
-                        'name' => 'required|string|max:255',
-                        'price' => 'required|numeric|min:0',
-                        'category_id' => 'required|exists:categories,id',
-                        'slug' => 'required|string|unique:products,slug,' . ($this->getProductIdBySlug($row['slug'] ?? '') ?? 'NULL'),
-                        'quantity' => 'integer|min:0',
-                    ]);
+        DB::beginTransaction();
 
-                    if ($validator->fails()) {
-                        $metrics['errors']++;
-                        $this->newLine();
-                        $this->error("Validation failed for product: " . ($row['name'] ?? 'Unknown'));
-                        $this->line(implode(', ', $validator->errors()->all()));
-                        $bar->advance();
+        try {
+
+            LazyCollection::make(function () use ($filePath) {
+
+                $handle = fopen($filePath, 'r');
+
+                if (!$handle) {
+                    throw new \RuntimeException("Unable to open file.");
+                }
+
+                $header = fgetcsv($handle);
+
+                while (($row = fgetcsv($handle)) !== false) {
+
+                    // Skip malformed rows
+                    if (count($header) !== count($row)) {
                         continue;
                     }
 
-                    $data = [
-                        'name' => $row['name'],
-                        'description' => $row['description'] ?? null,
-                        'price' => $row['price'],
-                        'discount_price' => $row['discount_price'] ?? null,
-                        'tags' => json_decode($row['tags'] ?? '[]', true),
-                        'category_id' => $row['category_id'],
-                        'image_path' => $row['image_path'] ?? null,
-                        'is_active' => $row['is_active'] ?? true,
-                        'quantity' => $row['quantity'] ?? 0,
-                    ];
+                    yield array_combine($header, $row);
+                }
 
-                    $product = Product::where('slug', $row['slug'])->first();
+                fclose($handle);
+            })
+                ->chunk(100)
+                ->each(function ($chunk) use (
+                    &$metrics,
+                    $bar,
+                    $validCategoryIds
+                ) {
 
-                    if ($product) {
-                        $product->update($data);
-                        $metrics['updated']++;
-                    } else {
-                        $data['slug'] = $row['slug'];
-                        Product::create($data);
-                        $metrics['created']++;
+                    $rows = [];
+
+                    $now = now();
+
+                    foreach ($chunk as $row) {
+
+                        /*
+                    |--------------------------------------------------------------------------
+                    | Basic validation
+                    |--------------------------------------------------------------------------
+                    */
+
+                        if (
+                            empty($row['name']) ||
+                            empty($row['slug']) ||
+                            !isset($row['price']) ||
+                            !is_numeric($row['price'])
+                        ) {
+                            $metrics['errors']++;
+                            $bar->advance();
+                            continue;
+                        }
+
+                        /*
+                    |--------------------------------------------------------------------------
+                    | Validate category_id
+                    |--------------------------------------------------------------------------
+                    */
+
+                        $categoryId = (int) ($row['category_id'] ?? 0);
+
+                        if (!isset($validCategoryIds[$categoryId])) {
+                            $metrics['errors']++;
+                            $bar->advance();
+                            continue;
+                        }
+
+                        /*
+                    |--------------------------------------------------------------------------
+                    | Prepare row
+                    |--------------------------------------------------------------------------
+                    */
+
+                        $rows[] = [
+                            'slug' => trim($row['slug']),
+                            'name' => trim($row['name']),
+                            'description' => $row['description'] ?? null,
+
+                            'price' => (float) $row['price'],
+
+                            'discount_price' => isset($row['discount_price']) &&
+                                $row['discount_price'] !== ''
+                                ? (float) $row['discount_price']
+                                : null,
+
+                            'tags' => !empty($row['tags'])
+                                ? $row['tags']
+                                : json_encode([]),
+
+                            'category_id' => $categoryId,
+
+                            'image_path' => $row['image_path'] ?? null,
+
+                            'is_active' => isset($row['is_active'])
+                                ? filter_var(
+                                    $row['is_active'],
+                                    FILTER_VALIDATE_BOOLEAN
+                                )
+                                : true,
+
+                            'quantity' => isset($row['quantity'])
+                                ? (int) $row['quantity']
+                                : 0,
+
+                            'created_at' => $now,
+                            'updated_at' => $now,
+                        ];
+
+                        $metrics['processed']++;
+
+                        $bar->advance();
                     }
 
-                    $bar->advance();
-                }
-            });
-        });
+                    /*
+                |--------------------------------------------------------------------------
+                | Bulk Upsert
+                |--------------------------------------------------------------------------
+                |
+                | Requires unique index on slug
+                |
+                */
+
+                    if (!empty($rows)) {
+
+                        DB::table('products')->upsert(
+                            $rows,
+
+                            // Unique key
+                            ['slug'],
+
+                            // Columns to update
+                            [
+                                'name',
+                                'description',
+                                'price',
+                                'discount_price',
+                                'tags',
+                                'category_id',
+                                'image_path',
+                                'is_active',
+                                'quantity',
+                                'updated_at',
+                            ]
+                        );
+                    }
+                });
+
+            DB::commit();
+        } catch (\Throwable $e) {
+
+            DB::rollBack();
+
+            $this->newLine(2);
+
+            $this->error("Import failed!");
+            $this->error($e->getMessage());
+
+            return self::FAILURE;
+        }
 
         $bar->finish();
+
         $this->newLine(2);
 
         $endTime = microtime(true);
+
         $peakMemory = memory_get_peak_usage();
+
         $memoryUsed = ($peakMemory - $initialMemory) / 1024 / 1024;
 
         $this->table(
             ['Metric', 'Value'],
             [
-                ['Created', $metrics['created']],
-                ['Updated', $metrics['updated']],
-                ['Errors', $metrics['errors']],
-                ['Total Processed', $metrics['created'] + $metrics['updated'] + $metrics['errors']],
-                ['Time Elapsed', number_format($endTime - $startTime, 2) . ' seconds'],
-                ['Peak Memory Height', number_format($memoryUsed, 2) . ' MB'],
+                ['Processed', number_format($metrics['processed'])],
+                ['Errors', number_format($metrics['errors'])],
+                ['Time Elapsed', number_format($endTime - $startTime, 2) . ' sec'],
+                ['Peak Memory Usage', number_format($memoryUsed, 2) . ' MB'],
             ]
         );
 
-        $this->info("Import completed!");
+        $this->info('Import completed successfully.');
 
-        return 0;
+        return self::SUCCESS;
     }
 
-    private function countLines($file)
+    /**
+     * Count file lines.
+     */
+    private function countLines(string $file): int
     {
         $lineCount = 0;
-        $handle = fopen($file, "r");
+
+        $handle = fopen($file, 'r');
+
         while (!feof($handle)) {
             fgets($handle);
             $lineCount++;
         }
-        fclose($handle);
-        return $lineCount;
-    }
 
-    private function getProductIdBySlug($slug)
-    {
-        return Product::where('slug', $slug)->value('id');
+        fclose($handle);
+
+        return $lineCount;
     }
 }

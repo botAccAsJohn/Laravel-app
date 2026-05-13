@@ -12,7 +12,9 @@ class SendCartAbandonedEmailListener implements ShouldQueue
     public function __construct(
         protected CartService $cartService
     ) {}
-
+    public $queue = 'emails';
+    public $tries = 3;
+    public $backoff = [10, 30, 60];
     /**
      * Handle the event.
      */

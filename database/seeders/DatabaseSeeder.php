@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Artisan;
 
 class DatabaseSeeder extends Seeder
 {
@@ -37,6 +38,11 @@ class DatabaseSeeder extends Seeder
         $this->call(CategorySeeder::class);
 
         // ── Products ──────────────────────────────────────────────────────────
+
+        $this->command->info('Importing large product dataset from CSV...');
+        Artisan::call('app:import-products', [
+            'file' => 'storage/helpers/large_products.csv'
+        ], $this->command->getOutput());
 
         Product::factory(10)->create();
 

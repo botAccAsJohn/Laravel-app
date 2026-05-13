@@ -152,8 +152,8 @@ class CartService
         $total = 0.0;
 
         foreach ($cart as $productId => $item) {
-            // Skip metadata keys
-            if ($productId === '_last_activity_at') {
+            // Skip metadata keys starting with _
+            if (is_string($productId) && str_starts_with($productId, '_')) {
                 continue;
             }
 
@@ -314,6 +314,29 @@ class CartService
         Redis::del($this->getKey($userId));
 
         Log::channel('cart')->info('Cart cleared', ['user_id' => $userId]);
+    }
+
+    /**
+     * Store an applied coupon code in the cart metadata.
+     */
+    public function applyCoupon(int $userId, ?string $couponCode): void
+    {
+        $cart = $this->get($userId);
+        if ($couponCode) {
+            $cart['_applied_coupon'] = $couponCode;
+        } else {
+            unset($cart['_applied_coupon']);
+        }
+        $this->save($userId, $cart);
+    }
+
+    /**
+     * Retrieve the applied coupon code from the cart metadata.
+     */
+    public function getAppliedCoupon(int $userId): ?string
+    {
+        $cart = $this->get($userId);
+        return $cart['_applied_coupon'] ?? null;
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────

@@ -6,7 +6,7 @@ use App\Events\Orders\OrderPlaced;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
 
-class UpdateInventoryListener
+class UpdateInventoryListener implements ShouldQueue
 {
     use InteractsWithQueue;
 
@@ -23,11 +23,10 @@ class UpdateInventoryListener
 
             if ($model) {
                 // Deduct inventory in the database
-                $model->quantity = $model->quantity - $item->quantity;
-                $model->save();
+                $model->decrement('quantity', $item->quantity);
 
                 // Get fresh stock and dispatch the event to notify the frontend
-                broadcast(new \App\Events\ProductStockChanged($model->id, $model->quantity));
+                broadcast(new \App\Events\ProductStockChanged($model->id, $model->fresh()->quantity));
 
                 // Clear the cache for this product since quantity changed
                 \Illuminate\Support\Facades\Cache::forget(\App\Models\Product::CACHE_KEY_SINGLE . $model->slug);

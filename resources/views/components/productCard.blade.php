@@ -78,8 +78,8 @@
     <div class="flex items-center justify-between mt-auto pt-6 border-t border-slate-50">
         <div class="flex flex-col">
             @if($product->discount_price)
-            <span class="text-[11px] line-through text-slate-400 font-medium mb-0.5">{{format_price($product->price)}}</span>
-            <span class="text-2xl font-black text-indigo-600 tracking-tighter">{{format_price($product->discount_price)}}</span>
+            <span class="text-[11px] line-through text-slate-400 font-medium mb-0.5">@currency($product->price)</span>
+            <span class="text-2xl font-black text-indigo-600 tracking-tighter">@currency($product->discount_price)</span>
             @else
             <span class="text-[11px] text-slate-400 font-bold uppercase tracking-widest mb-1.5">{{ __('products.market_price') }}</span>
             <span class="text-2xl font-black text-slate-900 tracking-tighter">@currency($product->price)</span>
