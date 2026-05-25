@@ -10,6 +10,55 @@ use Illuminate\Support\Str;
 
 class ProductService
 {
+ 
+
+    // public function dosomething($request)
+    // {
+    //     $filters = [
+    //         'categories' => (array) $request->input('categories', []),
+    //         'min_price' => $request->filled('min_price') ? (float) $request->input('min_price') : null,
+    //         'max_price' => $request->filled('max_price') ? (float) $request->input('max_price') : null,
+    //         'in_stock' => $request->boolean('in_stock'),
+    //         'on_sale' => $request->boolean('on_sale'),
+    //         'sort' => $request->input('sort', 'newest'),
+    //     ];
+
+    //     if ($filters['min_price'] !== null && $filters['max_price'] !== null && $filters['min_price'] > $filters['max_price']) {
+    //         $temp = $filters['min_price'];
+    //         $filters['min_price'] = $filters['max_price'];
+    //         $filters['max_price'] = $temp;
+    //     }
+    //     ksort($filters);
+    //     $page = (int) $request->get('page', 1);
+    //     $payload = [
+    //         'filters'  => $filters,
+    //         'page'     => $page
+    //     ];
+    //     $key = md5(json_encode($payload));
+    //     $cacheKey = 'product:' . $key;
+
+
+    //     return Cache::tags('productsPage')->remember($cacheKey, 60 * 60 * 24, function () use ($request, $page) {
+    //         $results = $this->filterProducts(Product::getAllProductsFromCache(), $request);
+
+    //         $perPage = 12;
+    //         $items = $results['products'];
+
+    //         $paginated = new \Illuminate\Pagination\LengthAwarePaginator(
+    //             $items->forPage($page, $perPage)->values(),
+    //             $items->count(),
+    //             $perPage,
+    //             $page,
+    //             ['path' => \Illuminate\Pagination\Paginator::resolveCurrentPath(), 'query' => $request->query()]
+    //         );
+
+    //         return [
+    //             'products'   => $paginated,
+    //             'filters'    => $results['filters'],
+    //             'priceRange' => $results['priceRange']
+    //         ];
+    //     });
+    // }
 
     public function dosomething($request)
     {
@@ -27,39 +76,72 @@ class ProductService
             $filters['min_price'] = $filters['max_price'];
             $filters['max_price'] = $temp;
         }
+
         ksort($filters);
-        $page = (int) $request->get('page', 1);
+
+        // 1. Cursor pagination uses a cursor string instead of a page integer
+        $cursor = $request->query('cursor', '');
+
         $payload = [
-            'filters'  => $filters,
-            'page'     => $page
+            'filters' => $filters,
+            'cursor' => $cursor
         ];
+
         $key = md5(json_encode($payload));
         $cacheKey = 'product:' . $key;
 
+        return Cache::tags('productsPage')->remember($cacheKey, 60 * 60 * 24, function () use ($filters, $cursor) {
 
-        return Cache::tags('productsPage')->remember($cacheKey, 60 * 60 * 24, function () use ($request, $page) {
-            $results = $this->filterProducts(Product::getAllProductsFromCache(), $request);
+            $query = Product::query()->with('category');
+
+            // Apply Filters
+            if (!empty($filters['categories'])) {
+                $query->whereIn('category_id', $filters['categories']);
+            }
+
+            if ($filters['min_price'] !== null) {
+                $query->where('price', '>=', $filters['min_price']);
+            }
+
+            if ($filters['max_price'] !== null) {
+                $query->where('price', '<=', $filters['max_price']);
+            }
+
+            if ($filters['in_stock']) {
+                $query->where('quantity', '>', 0);
+            }
+
+            if ($filters['on_sale']) {
+                $query->where('discount_price', '>', 0);
+            }
+
+            // 2. Deterministic Sorting: Always fallback to a unique identifier (like 'id')
+            // to prevent cursor pagination from breaking on duplicate values.
+            match ($filters['sort']) {
+                'price_low_high' => $query->orderBy('price', 'asc')->orderBy('id', 'asc'),
+                'price_high_low' => $query->orderBy('price', 'desc')->orderBy('id', 'desc'),
+                'oldest' => $query->orderBy('created_at', 'asc')->orderBy('id', 'asc'),
+                default => $query->orderBy('created_at', 'desc')->orderBy('id', 'desc'), // 'newest'
+            };
 
             $perPage = 12;
-            $items = $results['products'];
+            
+            // 3. Execute Cursor Pagination
+            $paginated = $query->cursorPaginate($perPage, ['*'], 'cursor', $cursor ?: null);
 
-            $paginated = new \Illuminate\Pagination\LengthAwarePaginator(
-                $items->forPage($page, $perPage)->values(),
-                $items->count(),
-                $perPage,
-                $page,
-                ['path' => \Illuminate\Pagination\Paginator::resolveCurrentPath(), 'query' => $request->query()]
-            );
+            // Optional: Global bounds. Consider caching this separately if it rarely changes.
+            $priceRange = [
+                'min' => $filters['min_price'] ?? 0,
+                'max' => $filters['max_price'] ?? 0,
+            ];
 
             return [
-                'products'   => $paginated,
-                'filters'    => $results['filters'],
-                'priceRange' => $results['priceRange']
+                'products' => $paginated,
+                'filters' => $filters,
+                'priceRange' => $priceRange,
             ];
         });
     }
-
-
 
 
     public function create(array $validated, ?UploadedFile $imageFile = null): Product
@@ -133,7 +215,7 @@ class ProductService
         $updated = $product->update($validated);
 
         // Broadcast if quantity changed
-        if ($updated && isset($validated['quantity']) && (int)$validated['quantity'] !== (int)$oldQuantity) {
+        if ($updated && isset($validated['quantity']) && (int) $validated['quantity'] !== (int) $oldQuantity) {
             broadcast(new \App\Events\ProductStockChanged($product->id, $product->quantity));
         }
 

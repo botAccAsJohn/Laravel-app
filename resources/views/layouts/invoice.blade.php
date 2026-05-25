@@ -228,23 +228,9 @@
             <td>{{ $item['description'] ?? 'N/A' }}</td>
             <td class="text-center">{{ $item['quantity'] ?? 0 }}</td>
             <td class="text-center">@currency($item['unit_price'] ?? 0)</td>
-            <td class="text-center">@currency(($item['quantity'] ?? 0) * ($item['unit_price'] ?? 0))</td>
+            <td class="text-center">@currency($item['total_price'] ?? (($item['quantity'] ?? 0) * ($item['unit_price'] ?? 0)))</td>
         </tr>
         @endforeach
-
-        <!-- Generate padded blank rows to match the image structure up to 10 rows -->
-        @php
-        $itemCount = count($invoice['items'] ?? []);
-        $padRows = max(0, 10 - $itemCount);
-        @endphp
-        @for($i = 0; $i < $padRows; $i++)
-            <tr>
-            <td></td>
-            <td class="text-center"></td>
-            <td class="text-center"></td>
-            <td class="text-center"></td>
-            </tr>
-            @endfor
     </table>
 
     <!-- Bottom Section -->
@@ -284,6 +270,18 @@
                         <td class="summary-label">Subtotal:</td>
                         <td class="summary-value">@currency($invoice['subtotal'] ?? 0)</td>
                     </tr>
+                    @if(!empty($invoice['discount']) && $invoice['discount'] > 0)
+                    <tr>
+                        <td class="summary-label">Discount:</td>
+                        <td class="summary-value">-@currency($invoice['discount'])</td>
+                    </tr>
+                    @endif
+                    @if(!empty($invoice['coupon_code']))
+                    <tr>
+                        <td class="summary-label">Coupon:</td>
+                        <td class="summary-value">{{ $invoice['coupon_code'] }}</td>
+                    </tr>
+                    @endif
                     <tr>
                         <td class="summary-label">Shipping Charges:</td>
                         <td class="summary-value">@currency($invoice['shipping_charges'] ?? 0)</td>

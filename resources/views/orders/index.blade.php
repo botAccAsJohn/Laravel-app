@@ -69,7 +69,7 @@
                                 <tr class="hover:bg-gray-50 transition">
                                     <td class="px-6 py-4 align-top">
                                         <div class="font-semibold text-gray-800">
-                                            #{{ $order->id }}
+                                            #{{ $order->order_number ?? $order->id }}
                                         </div>
                                         <span
                                             class="inline-flex items-center px-2.5 py-1 mt-2 text-xs font-medium border rounded-full {{ $badgeClass }}">
@@ -102,17 +102,17 @@
                                     </td>
                                     <td class="px-6 py-4 align-top">
                                         <div class="flex justify-end gap-2 text-sm">
-                                            <a href="{{ route('orders.show', $order->id) }}"
+                                            <a href="{{ route('orders.show', $order) }}"
                                                 class="border border-gray-300 text-gray-700 px-3 py-1.5 rounded-lg hover:bg-gray-100 transition whitespace-nowrap">
                                                 View
                                             </a>
 
                                             @if(Auth::user()->role === 'admin')
-                                                <a href="{{ route('orders.edit', $order->id) }}"
+                                                <a href="{{ route('orders.edit', $order) }}"
                                                     class="bg-yellow-500 text-white px-3 py-1.5 rounded-lg hover:bg-yellow-600 transition whitespace-nowrap">
                                                     Edit
                                                 </a>
-                                                <form action="{{ route('orders.destroy', $order->id) }}" method="POST"
+                                                <form action="{{ route('orders.destroy', $order) }}" method="POST"
                                                     onsubmit="return confirm('Are you sure you want to delete this order?');" class="inline">
                                                     @csrf
                                                     @method('DELETE')
@@ -124,7 +124,7 @@
                                             @endif
 
                                             @if(Auth::id() === $order->user_id && in_array($status, ['pending', 'confirmed']))
-                                                <form action="{{ route('orders.cancel', $order->id) }}" method="POST"
+                                                <form action="{{ route('orders.cancel', $order) }}" method="POST"
                                                     onsubmit="return confirm('Do you really want to cancel this order? This action cannot be undone.');" class="inline">
                                                     @csrf
                                                     <button type="submit"
@@ -139,6 +139,9 @@
                             @endforeach
                         </tbody>
                     </table>
+                </div>
+                <div class="px-6 py-4 border-t border-gray-200">
+                    {{ $orders->withQueryString()->links() }}
                 </div>
             @else
                 <div class="px-6 py-12 text-center">

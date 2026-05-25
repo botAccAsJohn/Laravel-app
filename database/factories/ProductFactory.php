@@ -43,4 +43,32 @@ class ProductFactory extends Factory
             'is_active'      => fake()->boolean(80),
         ];
     }
+
+    public function featured(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'tags' => ['featured'],
+        ]);
+    }
+
+    public function outOfStock(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'quantity' => 0,
+        ]);
+    }
+
+    public function onSale(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'discount_price' => fake()->randomFloat(2, 1, $attributes['price'] - 0.01),
+        ]);
+    }
+
+    public function published(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_active' => true,
+        ]);
+    }
 }

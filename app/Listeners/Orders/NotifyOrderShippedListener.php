@@ -31,7 +31,7 @@ class NotifyOrderShippedListener implements ShouldQueue
         $order->load('user');
 
         if (!$order->user) {
-            Log::channel('orders')->warning("Cannot notify shipped — no user for Order #{$order->id}");
+            Log::channel('orders')->warning("Cannot notify shipped — no user for Order #{$order->order_number}");
             return;
         }
 
@@ -42,12 +42,12 @@ class NotifyOrderShippedListener implements ShouldQueue
             $order->user->notify(new OrderShipped($order));
         }, 60);
 
-        Log::channel('orders')->info("Shipped notification dispatched for Order #{$order->id}");
+        Log::channel('orders')->info("Shipped notification dispatched for Order #{$order->order_number}");
     }
 
     public function failed(object $event, \Throwable $exception): void
     {
-        Log::channel('orders')->error("NotifyOrderShippedListener failed for Order #{$event->order->id}", [
+        Log::channel('orders')->error("NotifyOrderShippedListener failed for Order #{$event->order->order_number}", [
             'error' => $exception->getMessage(),
         ]);
     }

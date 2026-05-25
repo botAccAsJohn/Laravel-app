@@ -15,13 +15,14 @@ class OrderController extends Controller
         private OrderService $service,
     ) {}
 
-    public function index(): View
+    public function index(Request $request): View
     {
-        $orders = $this->service->getOrdersForUser(Auth::user());
+        $cursor = $request->query('cursor', '');
+        $data = $this->service->getOrdersForUser(Auth::user(), $cursor);
 
         return view('orders.index', [
-            'orders' => $orders,
-            'total_orders' => $orders->count(),
+            'orders' => $data['orders'],
+            'total_orders' => $data['total_orders'],
         ]);
     }
 
@@ -106,7 +107,7 @@ class OrderController extends Controller
         try {
             $order = $this->service->createFromCart(Auth::user(), $validated, $summary);
 
-            return redirect()->route('orders.show', $order->id)->with('success', 'Order created successfully.');
+            return redirect()->route('orders.show', $order)->with('success', 'Order created successfully.');
         } catch (\App\Exceptions\ProductOutOfStockException $e) {
             return redirect()->route('cart.index')->with('error', $e->getMessage());
         } catch (\Exception $e) {
@@ -118,7 +119,7 @@ class OrderController extends Controller
     public function show(Order $order): View
     {
         $this->authorizeAccess($order);
-        $order->load(['user', 'items.product']);
+        $order->loadMissing(['user', 'items.product']);
         return view('orders.show', compact('order'));
     }
 
@@ -126,7 +127,7 @@ class OrderController extends Controller
     {
         abort_unless(Auth::user()->role === 'admin', 403, 'Only admins can edit orders.');
 
-        $order->load(['items.product']);
+        $order->loadMissing(['items.product']);
 
         return view('orders.edit', compact('order'));
     }
@@ -169,13 +170,13 @@ class OrderController extends Controller
 
         $this->authorizeAccess($order);
 
-        $path = 'invoices/invoice-' . $order->id . '.pdf';
+        $path = 'invoices/invoice-' . ($order->order_number ?? $order->id) . '.pdf';
 
         if (!Storage::disk('public')->exists($path)) {
             return redirect()->back()->with('error', 'Invoice file not found.');
         }
 
-        return Storage::disk('public')->download($path, 'invoice-' . $order->id . '.pdf');
+        return Storage::disk('public')->download($path, 'invoice-' . ($order->order_number ?? $order->id) . '.pdf');
     }
 
     /**

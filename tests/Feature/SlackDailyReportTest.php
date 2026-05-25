@@ -76,4 +76,42 @@ class SlackDailyReportTest extends TestCase
             return $notifiable->routes['slack'] === '#bot-testing';
         });
     }
+
+    public function test_admin_reports_exclude_soft_deleted_rows_by_default()
+    {
+        Notification::fake();
+
+        $yesterday = Carbon::yesterday();
+
+        // Soft-delete an Order from yesterday
+        $order = Order::factory()->create([
+            'placed_at' => $yesterday,
+            'total_amount' => 100.00
+        ]);
+        $order->delete();
+
+        // Soft-delete a User from yesterday
+        $user = User::factory()->create([
+            'created_at' => $yesterday
+        ]);
+        $user->delete();
+
+        // Soft-delete a Product with low stock
+        $product = Product::factory()->create([
+            'quantity' => 5
+        ]);
+        $product->delete();
+
+        $this->artisan('slack:daily-digest')
+             ->assertSuccessful();
+
+        Notification::assertSentOnDemand(DailyDigest::class, function ($notification, $channels, $notifiable) {
+            $data = $notification->data;
+            
+            return $data['orders_count'] === 0 &&
+                   $data['revenue'] === 0.0 &&
+                   $data['new_customers'] === 0 &&
+                   $data['low_stock_count'] === 0;
+        });
+    }
 }

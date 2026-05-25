@@ -4,6 +4,7 @@ namespace App\Observers;
 
 use App\Models\Order;
 use App\Enum\OrderStatus;
+use Illuminate\Support\Facades\Auth;
 
 class OrderObserver
 {
@@ -15,6 +16,7 @@ class OrderObserver
         // Order creation side-effects (notifications, invoice, inventory)
         // are handled by listeners on the OrderPlaced event,
         // which is dispatched from OrderService::createFromCart().
+        $order->created_by = Auth::id();
     }
 
     /**
@@ -47,6 +49,8 @@ class OrderObserver
             OrderStatus::DELIVERED->value => event(new \App\Events\Orders\OrderDelivered($order)),
             default => null,
         };
+
+        $order->updated_by = Auth::id();
     }
 
     /**

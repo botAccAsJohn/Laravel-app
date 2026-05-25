@@ -18,9 +18,11 @@ return new class extends Migration
             $table->string('preferred_locale')->default('en');
             $table->string('webhook_url')->nullable();
             $table->string('email')->unique();
+            $table->string('phone')->nullable();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
-            $table->rememberToken();
+            $table->rememberToken()->nullable();
+            $table->softDeletes();
             $table->timestamps();
         });
 

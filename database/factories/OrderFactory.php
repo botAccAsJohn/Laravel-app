@@ -5,6 +5,7 @@ namespace Database\Factories;
 use App\Models\Order;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Order>
@@ -21,6 +22,7 @@ class OrderFactory extends Factory
     public function definition(): array
     {
         return [
+            'order_number' => 'ORD-' . now()->format('ymdHis') . '-' . strtoupper(Str::random(6)),
             'user_id' => User::factory(),
             'status' => 'pending',
             'payment_method' => 'card',
@@ -31,5 +33,26 @@ class OrderFactory extends Factory
             'final_amount' => 100.00,
             'placed_at' => now(),
         ];
+    }
+
+    public function pending(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => 'pending',
+        ]);
+    }
+
+    public function completed(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => 'completed',
+        ]);
+    }
+
+    public function cancelled(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => 'cancelled',
+        ]);
     }
 }

@@ -6,18 +6,13 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-
 use App\Collections\ProductCollection;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Laravel\Scout\Searchable;
 
 class Product extends Model
 {
-    use HasFactory;
-
-    public function newCollection(array $models = [])
-    {
-        return new ProductCollection($models);
-    }
-
+    use HasFactory, SoftDeletes, Searchable;
 
     protected $fillable = [
         'name',
@@ -68,6 +63,61 @@ class Product extends Model
         return $this->hasMany(Review::class);
     }
 
+
+    public function tags()
+    {
+        return $this->belongsToMany(Tag::class);
+    }
+
+
+        public function searchableAs(): string
+    {
+        return 'products_v1';
+    }
+
+    // ── 2. Exclude unpublished + soft-deleted ────────────
+    public function shouldBeSearchable(): bool
+    {
+        return $this->is_active === true   // ← is_active not is_published
+        && ! $this->trashed();
+    }
+
+    // ── 3. Eager-load category before indexing ───────────
+    public function makeSearchableUsing(
+        \Illuminate\Database\Eloquent\Collection $models
+    ): \Illuminate\Database\Eloquent\Collection {
+        return $models->load('category');
+    }
+
+    public function toSearchableArray(): array
+    {
+            return [
+        'id'          => $this->id,
+        'name'        => $this->name,
+        'description' => $this->description,
+        'slug'        => $this->slug,
+        'category'    => $this->category?->name,
+        'category_id' => $this->category_id,
+        'tags'        => $this->tags,        // already cast to array ✓
+        'price'       => (float) $this->price,
+        'quantity'    => (int) $this->quantity,
+        'is_active'   => (bool) $this->is_active,  // ← correct field
+        'created_at'  => $this->created_at?->timestamp,
+    ];
+    }
+
+    // /**
+    //  * Override search index name (optional).
+    //  */
+    // public function searchableAs(): string
+    // {
+    //     return 'products_index';
+    // }
+
+    public function newCollection(array $models = [])
+    {
+        return new ProductCollection($models);
+    }
 
     const TTL_ALL_PRODUCTS = 60 * 60; // 1 hour – shared TTL for both cache layers
     const CACHE_KEY_ALL = 'products:all';

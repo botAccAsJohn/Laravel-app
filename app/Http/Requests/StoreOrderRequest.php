@@ -16,7 +16,7 @@ class StoreOrderRequest extends FormRequest
     {
         return [
             'address' => ['required', 'string', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:20'],
+            'phone' => ['nullable', 'numeric', 'digits:10'],
             'payment_method' => ['required', 'in:card,upi,wallet,cod,emi,netbanking'],
             'coupon_code' => ['nullable', 'string', 'max:50'],
         ];

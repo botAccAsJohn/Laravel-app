@@ -35,6 +35,7 @@ class OrderStatusUpdated implements ShouldBroadcast
     {
         return [
             'order_id' => $this->order->id,
+            'order_number' => $this->order->order_number,
             'status' => $this->order->status,
             'label' => ucfirst($this->order->status),
             'updated_at' => $this->order->updated_at->toDateTimeString(),

@@ -39,7 +39,7 @@ class OrderDelivered extends Notification implements ShouldQueue
     {
         return [
             'title' => __('Order Delivered'),
-            'message' => __('Your order #:number has been delivered.', ['number' => $this->order->id]),
+            'message' => __('Your order #:number has been delivered.', ['number' => $this->order->order_number]),
             'url' => route('orders.show', $this->order),
             'data' => [
                 'order_id' => $this->order->id,

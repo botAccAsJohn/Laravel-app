@@ -10,7 +10,9 @@ Broadcast::channel('admin.orders', function ($user) {
     return $user->role === 'admin';
 });
 Broadcast::channel('order.{orderId}', function ($user, $orderId) {
-    $order = Order::find($orderId);
+    $order = \Illuminate\Support\Facades\Cache::remember("orders:id:{$orderId}", now()->addMinutes(30), function () use ($orderId) {
+        return Order::find($orderId);
+    });
     return $order && $order->user_id === $user->id;
 });
 

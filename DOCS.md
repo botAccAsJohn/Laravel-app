@@ -27,5 +27,5 @@ The application resolves the active locale based on the following priority:
 The middleware also updates the user's database preference if they change languages while logged in.
 
 ```Queue CMD
-p queue:work --queue=emails,default
+p queue:work --queue=realtime,emails,default,slack,webhooks,
 ```

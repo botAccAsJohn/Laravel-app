@@ -7,10 +7,11 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Contracts\Translation\HasLocalePreference;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class User extends Authenticatable implements HasLocalePreference
 {
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, SoftDeletes;
 
     protected $fillable = [
         'name',
@@ -80,15 +81,15 @@ class User extends Authenticatable implements HasLocalePreference
             // ── Webhook-routed (posts to the channel the webhook is configured for) ──
             $notification instanceof \App\Notifications\NewOrderReceived,
             $notification instanceof \App\Notifications\OrderShipped
-                => config('services.slack.webhook_order_url'),
+            => config('services.slack.webhook_order_url'),
 
             $notification instanceof \App\Notifications\ProductLowStock,
             $notification instanceof \App\Notifications\ServerAlertNotification
-                => config('services.slack.webhook_alert_url'),
+            => config('services.slack.webhook_alert_url'),
 
             // ── Bot Token-routed (uses channel name + bot token) ──
             $notification instanceof \App\Notifications\NewSupportTicket
-                => config('services.slack.channels.support', '#support'),
+            => config('services.slack.channels.support', '#support'),
 
             default => config('services.slack.notifications.channel', '#general'),
         };

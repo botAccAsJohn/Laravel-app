@@ -45,7 +45,7 @@ class NotifyOrderPlacedListener implements ShouldQueue
         $admins = User::where('role', 'admin')->get();
         Notification::send($admins, new NewOrderReceived($order));
 
-        Log::channel('orders')->info("Order #{$order->id} notifications dispatched", [
+        Log::channel('orders')->info("Order #{$order->order_number} notifications dispatched", [
             'customer' => $order->user?->email,
             'admin_count' => $admins->count(),
         ]);
@@ -53,7 +53,7 @@ class NotifyOrderPlacedListener implements ShouldQueue
 
     public function failed(object $event, \Throwable $exception): void
     {
-        Log::channel('orders')->error("NotifyOrderPlacedListener failed for Order #{$event->order->id}", [
+        Log::channel('orders')->error("NotifyOrderPlacedListener failed for Order #{$event->order->order_number}", [
             'error' => $exception->getMessage(),
         ]);
     }

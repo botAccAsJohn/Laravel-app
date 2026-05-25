@@ -45,6 +45,14 @@ Route::middleware(['auth'])->group(function () {
         // Admin Alerts
         Route::get('/admin/alerts', [\App\Http\Controllers\Admin\AdminAlertController::class, 'index'])->name('admin.alerts.index');
         Route::post('/admin/alerts', [\App\Http\Controllers\Admin\AdminAlertController::class, 'store'])->name('admin.alerts.store');
+
+        // Product Import (Exercise 46.3)
+        Route::get('/admin/import', [\App\Http\Controllers\Admin\ProductImportController::class, 'showForm'])->name('admin.import.form');
+        Route::post('/admin/import', [\App\Http\Controllers\Admin\ProductImportController::class, 'import'])->name('admin.import.process');
+        Route::get('/admin/import/queued/{batchCacheKey}/poll', [\App\Http\Controllers\Admin\ProductImportController::class, 'pollBatchId'])->name('admin.import.poll');
+        Route::get('/admin/import/progress/{batchId}', [\App\Http\Controllers\Admin\ProductImportController::class, 'progress'])->name('admin.import.progress');
+        Route::get('/admin/import/progress/{batchId}/status', [\App\Http\Controllers\Admin\ProductImportController::class, 'getProgress'])->name('admin.import.progress.status');
+        Route::post('/admin/import/progress/{batchId}/cancel', [\App\Http\Controllers\Admin\ProductImportController::class, 'cancel'])->name('admin.import.cancel');
     });
     Route::resource('products', Product2Controller::class)->only(['index', 'show']);
 

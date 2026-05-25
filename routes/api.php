@@ -1,10 +1,9 @@
 <?php
 
-use App\Models\Order;
-use App\Models\Product;
 use App\Models\User;
+use App\Models\OrderAnalytics;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\{Route, Log, File, Http, URL, Mail};
+use Illuminate\Support\Facades\{Route, DB, Log, File, Http, URL, Mail};
 
 Route::middleware('throttle:api')->group(function () {
     Route::get('/user', function (Request $request) {
@@ -58,7 +57,7 @@ Route::get('/redirect', function () {
 });
 
 Route::get('/downloadInvoice', function (\App\Services\OrderService $orderService) {
-    $order = \App\Models\Order::find(1);
+    $order = \App\Models\Order::firstOrFail();
     return $orderService->downloadInvoice($order);
 });
 
@@ -125,3 +124,53 @@ Route::get('/unsubscribe/{user}', function (Request $request, $user) {
 Route::post('/slack/interactions', [\App\Http\Controllers\Api\SlackInteractionController::class, 'handle'])
     ->middleware(\App\Http\Middleware\VerifySlackSignature::class)
     ->name('slack.interactions');
+
+
+Route::get('/order-analytics', function () { //{"main_db_users":2,"analytics_model_count":0,"analytics_raw_query":[{"total":0}]}
+
+    // MAIN DATABASE QUERY
+    $users = User::count();
+
+    // ANALYTICS DATABASE USING MODEL
+    $analyticsCount = OrderAnalytics::count();
+
+    // RAW QUERY ON ANALYTICS DB
+    $rawAnalytics = DB::connection('analytics')
+        ->select('SELECT COUNT(*) as total FROM order_analytics');
+
+    return response()->json([
+        'main_db_users' => $users,
+        'analytics_model_count' => $analyticsCount,
+        'analytics_raw_query' => $rawAnalytics,
+    ]);
+});
+
+Route::get('/search', function () {
+    $q = request()->query('q');
+    // $cat = request()->query('category_id');
+    // $tags = request()->query('tags'); // expects comma-separated string or array
+    // $inStock = request()->boolean('in_stock_only', false);
+    // $sort = request()->query('sort', 'relevance'); // 'relevance' or 'price'
+
+    $products = \App\Models\Product::search($q)->get();
+
+    // if ($cat) {
+    //     $products = $products->where('category_id', $cat);
+    // }
+
+    // if ($tags) {
+    //     $tagsArr = is_array($tags) ? $tags : explode(',', $tags);
+    //     $products = $products->whereIn('tags', $tagsArr);
+    // }
+
+    // if ($inStock) {
+    //     $products = $products->where('quantity', '>', 0);
+    // }
+
+    // if ($sort === 'price') {
+    //     $products = $products->orderBy('price', 'asc');
+    // }
+    // else, default is relevance (scout/laravel default)
+
+    return $products;
+});

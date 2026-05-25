@@ -22,12 +22,8 @@ class Product2Controller extends Controller
         $allProducts = $this->service->dosomething($request);
         $categories = Category::getAllCategoriesFromCache();
 
-        $paginator = $allProducts['products'];
-        $totalFound = $paginator->total();
-
         return view('products.indexOld', [
-            'products' => $paginator,
-            'total_products' => $totalFound,
+            'products' => $allProducts['products'],
             'all_products_count' => Product::countFromCache(),
             'page_title' => 'All Products',
             'categories' => $categories,

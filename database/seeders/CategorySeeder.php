@@ -4,23 +4,17 @@ namespace Database\Seeders;
 
 use App\Models\Category;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 
 class CategorySeeder extends Seeder
 {
+    use WithoutModelEvents;
+
     public function run(): void
     {
-        $categories = [
-            ['name' => 'Electronics'],
-            ['name' => 'Clothing'],
-            ['name' => 'Books'],
-            ['name' => 'Home & Garden'],
-            ['name' => 'Sports'],
-        ];
-
-        foreach ($categories as $data) {
-            Category::updateOrCreate(
-                ['name' => $data['name']]
-            );
-        }
+        DB::transaction(function () {
+            Category::factory()->count(10)->create();
+        });
     }
 }

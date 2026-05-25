@@ -46,12 +46,6 @@
 
         {{-- Products Stream --}}
         <div class="space-y-8">
-            {{-- Results Metadata --}}
-            <div class="flex items-center justify-between px-2">
-                <div class="text-[13px] font-bold uppercase tracking-widest text-slate-400">
-                    Search Results — <span class="text-indigo-600">{{ $total_products }}</span> Findings
-                </div>
-            </div>
 
             <div class="grid grid-cols-1 gap-8 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
                 @forelse($products as $product)

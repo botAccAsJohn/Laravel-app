@@ -18,20 +18,24 @@ return new class extends Migration
             $table->integer('quantity')->default(0);
             $table->decimal('average_rating', 3, 2)->default(0);
             $table->unsignedInteger('review_count')->default(0);
-            $table->decimal('price', 10, 2);
+            $table->decimal('price', 10, 2)->index();
             $table->decimal('discount_price', 10, 2)->nullable();
             $table->json('tags')->nullable();
 
             $table->foreignId('category_id')
                 ->nullable()
                 ->constrained('categories')
-                ->nullOnDelete();
+                ->cascadeOnUpdate()
+                ->restrictOnDelete();
 
             $table->string('slug', 255)->unique();
             $table->string('image_path')->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamps();
-
+            $table->foreignId('created_by')->nullable()->constrained('users')->cascadeOnUpdate()->nullOnDelete();
+            $table->foreignId('updated_by')->nullable()->constrained('users')->cascadeOnUpdate()->nullOnDelete();
+            $table->fullText(['name', 'description']);
+            $table->softDeletes();
             $table->index(['category_id', 'is_active', 'created_at']);
         });
     }

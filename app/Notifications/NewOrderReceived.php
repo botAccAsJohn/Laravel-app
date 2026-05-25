@@ -18,7 +18,7 @@ class NewOrderReceived extends Notification implements ShouldQueue
 
 
     protected const HIGH_VALUE_THRESHOLD = 500;
-
+        
     /**
      * Create a new notification instance.
      */
@@ -54,7 +54,7 @@ class NewOrderReceived extends Notification implements ShouldQueue
      */
     public function failed(\Throwable $exception): void
     {
-        Log::channel('admin')->error("NewOrderReceived notification failed for Order #{$this->order->id}", [
+        Log::channel('admin')->error("NewOrderReceived notification failed for Order #{$this->order->order_number}", [
             'error' => $exception->getMessage()
         ]);
     }
@@ -68,6 +68,7 @@ class NewOrderReceived extends Notification implements ShouldQueue
         return [
             'event' => 'order.received',
             'order_id' => $this->order->id,
+            'order_number' => $this->order->order_number,
             'customer' => $customerName,
             'amount' => $this->order->final_amount,
             'placed_at' => $this->order->placed_at->toDateTimeString(),
@@ -84,13 +85,13 @@ class NewOrderReceived extends Notification implements ShouldQueue
         $emoji = $isHighValue ? ':rotating_light:' : ':white_check_mark:';
 
         $customerName = $order->user ? $order->user->name : ($order->guest_email ?: __('Guest Customer'));
-        $adminUrl = route('orders.show', $order->id);
+        $adminUrl = route('orders.show', $this->order);
 
         return (new SlackMessage)
-            ->text("{$emoji} New Order Received — #{$order->id} by {$customerName}")
+            ->text("{$emoji} New Order Received — #{$order->order_number} by {$customerName}")
             ->headerBlock("{$emoji} " . __('New Order Received'))
             ->sectionBlock(function ($section) use ($order, $customerName) {
-                $section->text("*Order:* #{$order->id}\n*Customer:* {$customerName}")->markdown();
+                $section->text("*Order:* #{$order->order_number}\n*Customer:* {$customerName}")->markdown();
             })
             ->contextBlock(function ($context) use ($order) {
                 $context->text("*Total:* \${$order->total_amount}")->markdown();
@@ -127,9 +128,10 @@ class NewOrderReceived extends Notification implements ShouldQueue
         $customerName = $this->order->user ? $this->order->user->name : ($this->order->guest_email ?: __('Guest'));
         return [
             'title' => __('New Order Received'),
-            'message' => "Order #{$this->order->id} has been placed by {$customerName}.",
+            'message' => "Order #{$this->order->order_number} has been placed by {$customerName}.",
             'url' => route('orders.show', $this->order),
             'order_id' => $this->order->id,
+            'order_number' => $this->order->order_number,
             'order_total' => $this->order->total_amount,
         ];
     }
@@ -142,11 +144,12 @@ class NewOrderReceived extends Notification implements ShouldQueue
         $customerName = $this->order->user ? $this->order->user->name : ($this->order->guest_email ?: __('Guest'));
         return new BroadcastMessage([
             'orderId' => $this->order->id,
+            'orderNumber' => $this->order->order_number,
             'customerName' => $customerName,
             'orderTotal' => $this->order->total_amount,
             'itemsCount' => $this->order->items->count(),
             'title' => __('New Order Received'),
-            'message' => "Order #{$this->order->id} has been placed successfully.",
+            'message' => "Order #{$this->order->order_number} has been placed successfully.",
             'url' => route('orders.show', $this->order),
         ]);
     }

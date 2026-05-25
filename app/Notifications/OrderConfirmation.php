@@ -57,7 +57,7 @@ class OrderConfirmation extends Notification implements ShouldQueue
     {
         return [
             'title' => __('Order Confirmed'),
-            'message' => __('Your order #:number has been placed successfully.', ['number' => $this->order->id]),
+            'message' => __('Your order #:number has been placed successfully.', ['number' => $this->order->order_number]),
             'url' => route('orders.show', $this->order),
             'data' => [
                 'order_id' => $this->order->id,

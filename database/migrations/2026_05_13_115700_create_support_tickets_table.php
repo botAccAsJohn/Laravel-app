@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('customer_email');
             $table->enum('priority', ['low', 'medium', 'high', 'critical'])->default('medium');
             $table->enum('status', ['open', 'assigned', 'in_progress', 'closed'])->default('open');
-            $table->foreignId('assigned_to')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('assigned_to')->nullable()->constrained('users')->cascadeOnUpdate()->nullOnDelete();
             $table->timestamp('closed_at')->nullable();
             $table->timestamps();
         });

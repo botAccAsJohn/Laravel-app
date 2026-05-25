@@ -31,6 +31,7 @@ class SalesExport implements FromCollection, WithHeadings, WithMapping
     public function headings(): array
     {
         return [
+            'Order Number',
             'Order ID',
             'Customer Name',
             'Customer Email',
@@ -49,6 +50,7 @@ class SalesExport implements FromCollection, WithHeadings, WithMapping
     public function map($order): array
     {
         return [
+            $order->order_number,
             $order->id,
             $order->user->name ?? 'Guest',
             $order->user->email ?? 'N/A',

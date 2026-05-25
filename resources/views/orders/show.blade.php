@@ -26,7 +26,7 @@
     <div class="bg-white shadow-md rounded-lg p-6 space-y-6">
         <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
-                <h2 class="text-2xl font-bold text-gray-800">Order #{{ $order->id }}</h2>
+                <h2 class="text-2xl font-bold text-gray-800">Order #{{ $order->order_number ?? $order->id }}</h2>
                 <p class="text-sm text-gray-500 mt-1">
                     Placed {{ optional($order->placed_at)->format('d M Y, h:i A') ?? 'Not available' }}
                 </p>
@@ -103,12 +103,12 @@
 
         <div class="flex flex-wrap gap-4 border-t pt-6">
             @if(Auth::user()->role === 'admin')
-                <a href="{{ route('orders.edit', $order->id) }}"
+                <a href="{{ route('orders.edit', $order) }}"
                    class="bg-yellow-500 text-white py-2.5 px-6 rounded-lg hover:bg-yellow-600 transition font-medium shadow-sm">
                     Edit Order
                 </a>
 
-                <form action="{{ route('orders.destroy', $order->id) }}" method="POST"
+                <form action="{{ route('orders.destroy', $order) }}" method="POST"
                       onsubmit="return confirm('Are you sure you want to delete this order? This action is permanent.');">
                     @csrf
                     @method('DELETE')
@@ -119,7 +119,7 @@
             @endif
 
             @if(Auth::id() === $order->user_id && in_array($status, ['pending', 'confirmed']))
-                <form action="{{ route('orders.cancel', $order->id) }}" method="POST"
+                <form action="{{ route('orders.cancel', $order) }}" method="POST"
                       onsubmit="return confirm('Are you sure you want to cancel this order? This cannot be undone.');">
                     @csrf
                     <button type="submit" class="border-2 border-red-500 text-red-600 py-2.5 px-6 rounded-lg hover:bg-red-50 transition font-bold shadow-sm">
@@ -129,7 +129,7 @@
             @endif
 
             <div class="flex flex-col items-start gap-1">
-                <a href="{{ URL::temporarySignedRoute('invoices.download', now()->addMinutes(10), ['order' => $order->id]) }}"
+                <a href="{{ URL::temporarySignedRoute('invoices.download', now()->addMinutes(10), ['order' => $order]) }}"
                    class="bg-indigo-600 text-white py-2.5 px-6 rounded-lg hover:bg-indigo-700 transition font-medium shadow-sm flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />

@@ -3,9 +3,13 @@
 namespace App\Providers;
 
 use App\Services\{OrderService, ExternalApiService, CartService, PaymentService, LoggerService, MathService, AIService};
+use App\Listeners\HandleFailedJob;
+use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Support\ServiceProvider;
-use Illuminate\Support\Facades\{Log, RateLimiter, Blade, View, Auth, Response, DB, Http, Mail};
+use Illuminate\Support\Facades\{Event, Log, RateLimiter, Blade, View, Auth, Response, DB, Http, Mail};
 use App\Auth\RedisUserProvider;
+use Illuminate\Pagination\Paginator;
+
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -51,6 +55,9 @@ class AppServiceProvider extends ServiceProvider
         Blade::directive('currency', function ($amount) {
             return "<?php echo format_price($amount ?? 0); ?>";
         });
+
+        Paginator::useTailwind();// Tailwind CSS
+
         Response::macro('success', function ($data) {
             return response()->json([
                 'status' => 'success',
@@ -64,22 +71,32 @@ class AppServiceProvider extends ServiceProvider
                 ->withHeaders(['X-API-KEY' => 'my-secret-key']);
         });
 
-        DB::listen(function ($query) {
-            Log::channel('DBInteraction')->info('SQL Query', [
-                'sql' => $query->sql,
-                'bindings' => $query->bindings,
-                'time' => $query->time . 'ms',
-            ]);
-        });
+        // DB::listen(function ($query) {
+        //     Log::channel('DBInteraction')->info('SQL Query', [
+        //         'sql' => $query->sql,
+        //         'bindings' => $query->bindings,
+        //         'time' => $query->time . 'ms',
+        //     ]);
+        // });
 
         if ($this->app->environment('local')) {
             Mail::alwaysTo(config('mail.admin_email'));
+            DB::listen(function ($query) {
+                Log::channel('DBInteraction')->info('SQL Query', [
+                    'sql' => $query->sql,
+                    'bindings' => $query->bindings,
+                    'time' => $query->time . 'ms',
+                ]);
+            });
         }
 
         // Set default Slack webhook route for notifications
         if (config('services.slack.notifications.bot_user_oauth_token')) {
             \Illuminate\Support\Facades\Notification::route('slack', config('services.slack.notifications.bot_user_oauth_token'));
         }
+
+        // Exercise 46.5 — Centralised job-failure reporting via JobFailed event
+        Event::listen(JobFailed::class, HandleFailedJob::class);
 
         // Add Collection macro for manual pagination
         \Illuminate\Support\Collection::macro('paginate', function ($perPage, $total = null, $page = null, $pageName = 'page') {
@@ -100,6 +117,17 @@ class AppServiceProvider extends ServiceProvider
                 $app['hash'],
                 $config['model']
             );
+        });
+
+        // Invalidate notification cache globally whenever a notification changes
+        \Illuminate\Notifications\DatabaseNotification::saved(function ($notification) {
+            \Illuminate\Support\Facades\Cache::forget("user:{$notification->notifiable_id}:notifications:latest");
+            \Illuminate\Support\Facades\Cache::forget('unread_count_' . $notification->notifiable_id);
+        });
+
+        \Illuminate\Notifications\DatabaseNotification::deleted(function ($notification) {
+            \Illuminate\Support\Facades\Cache::forget("user:{$notification->notifiable_id}:notifications:latest");
+            \Illuminate\Support\Facades\Cache::forget('unread_count_' . $notification->notifiable_id);
         });
     }
 }

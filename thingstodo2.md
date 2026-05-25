@@ -93,3 +93,5 @@
 - [ ] **Exercise 33.5**: Expand `ReportManagerController` into a full-featured **Admin File Manager**.
 - [ ] **Exercise 36.3**: Implement pluralisation logic in language files (e.g., `hi.json`).
 
+Exe Remainig : Exercise 46.3 - Job Batching
+Exe Remainig : Exercise 46

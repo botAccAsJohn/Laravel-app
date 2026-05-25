@@ -107,7 +107,8 @@
                 <div class="space-y-4">
                     <h3 class="text-sm font-bold text-slate-900 uppercase tracking-wider">{{ __('products.about_item') }}</h3>
                     <div class="prose prose-slate max-w-none text-slate-600 prose-sm leading-relaxed">
-                        {!! nl2br(e($product->description)) !!}
+                        <!-- {!! nl2br(e($product->description)) !!} -->
+                        {!! Str::limit($product->description, 100) !!}
                     </div>
                 </div>
 

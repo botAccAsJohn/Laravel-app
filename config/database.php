@@ -63,6 +63,28 @@ return [
             ]) : [],
         ],
 
+        'analytics' => env('DB_ANALYTICS_DRIVER', 'mysql') === 'sqlite' ? [
+            'driver' => 'sqlite',
+            'database' => ':memory:',
+            'prefix' => '',
+            'foreign_key_constraints' => true,
+        ] : [
+            'driver' => 'mysql',
+            'url' => env('DB_ANALYTICS_URL'),
+            'host' => env('DB_ANALYTICS_HOST', ''),
+            'port' => env('DB_ANALYTICS_PORT', ''),
+            'database' => env('DB_ANALYTICS_DATABASE', ''),
+            'username' => env('DB_ANALYTICS_USERNAME', ''),
+            'password' => env('DB_ANALYTICS_PASSWORD', ''),
+            'unix_socket' => env('DB_ANALYTICS_SOCKET', ''),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => true,
+            'engine' => null,
+        ],
+
         'mariadb' => [
             'driver' => 'mariadb',
             'url' => env('DB_URL'),

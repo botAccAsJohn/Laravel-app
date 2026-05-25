@@ -2,9 +2,11 @@
 
 namespace App\Services;
 
+use App\Jobs\Orders\{ChargePayment, ReserveStock, GenerateInvoicePdf, SendOrderConfirmation};
 use App\Models\{Order, OrderItem, User, Coupon};
 use Barryvdh\DomPDF\Facade\Pdf;
-use Illuminate\Support\Facades\{DB, Log, Auth, Storage};
+use Illuminate\Support\Facades\{Bus, DB, Log, Auth, Storage, Cache};
+use Throwable;
 
 class OrderService
 {
@@ -12,11 +14,33 @@ class OrderService
         private CartService $cartService,
     ) {}
 
-    public function getOrdersForUser(User $user)
+    public function getOrdersForUser(User $user, ?string $cursor = null)
     {
-        return $user->role === 'admin'
-            ? Order::with('user')->latest('placed_at')->get()
-            : Order::with('user')->where('user_id', $user->id)->latest('placed_at')->get();
+        $cacheKey = $user->role === 'admin' 
+            ? "orders:admin:all:cursor:" . ($cursor ?: 'first')
+            : "orders:user:{$user->id}:cursor:" . ($cursor ?: 'first');
+
+        return Cache::tags('ordersPage')->remember($cacheKey, now()->addMinutes(30), function () use ($user, $cursor) {
+            $query = Order::with('user');
+
+            if ($user->role !== 'admin') {
+                $query->where('user_id', $user->id);
+            }
+
+            $totalOrders = $query->clone()->count();
+
+            // Deterministic sorting with unique fallback
+            $query->orderBy('placed_at', 'desc')->orderBy('id', 'desc');
+
+            $perPage = 10;
+
+            $paginated = $query->cursorPaginate($perPage, ['*'], 'cursor', $cursor ?: null);
+
+            return [
+                'orders' => $paginated,
+                'total_orders' => $totalOrders,
+            ];
+        });
     }
 
     public function cartSummary(int $userId, ?string $couponCode = null): array
@@ -97,7 +121,7 @@ class OrderService
                     'final_amount' => $summary['final_amount'],
                     'placed_at' => now(),
                 ]), function ($order) use ($user) {
-                    Log::channel('orders')->info("Order Initialized: #{$order->id} for User #{$user->id}");
+                    Log::channel('orders')->info("Order Initialized: #{$order->order_number} for User #{$user->id}");
                 });
 
                 foreach ($summary['cart'] as $productId => $item) {
@@ -142,11 +166,44 @@ class OrderService
                     $summary['coupon']->increment('used_count');
                 }
 
-                Log::channel('orders')->info("Order #{$order->id} finalized");
+                Log::channel('orders')->info("Order #{$order->order_number} finalized");
 
-                // All side-effects (invoice, inventory, notifications) are
-                // handled by listeners on this event — see EventServiceProvider.
+                // Fire legacy event (broadcasts real-time update to admin dashboard)
                 event(new \App\Events\Orders\OrderPlaced($order));
+
+                // ─────────────────────────────────────────────────────────────────
+                // Exercise 46.4 — Job Chain
+                // Sequence: ChargePayment → ReserveStock → GenerateInvoicePdf → SendOrderConfirmation
+                //
+                // Key properties:
+                //  • Each job runs ONLY if the previous one succeeded.
+                //  • catch() fires if ANY step throws — subsequent steps are skipped.
+                //  • unless($order->is_digital) skips stock reservation for virtual products.
+                // ─────────────────────────────────────────────────────────────────
+                $chain = [
+                    new ChargePayment($order),
+                    new ReserveStock($order),
+                    new GenerateInvoicePdf($order),
+                    new SendOrderConfirmation($order),
+                ];
+
+                // unless(): remove ReserveStock from the chain for digital orders
+                if ($order->is_digital ?? false) {
+                    $chain = array_filter($chain, fn($job) => !($job instanceof ReserveStock));
+                    $chain = array_values($chain);
+                }
+
+                Bus::chain($chain)
+                    ->onQueue('default')
+                    ->catch(function (Throwable $e) use ($order) {
+                        // Runs if any step in the chain fails after all retries
+                        Log::channel('orders')->critical(
+                            "Post-checkout chain FAILED for Order #{$order->order_number}: {$e->getMessage()}"
+                        );
+                        // Mark order for manual intervention
+                        $order->update(['status' => 'failed']);
+                    })
+                    ->dispatch();
 
                 return $order;
             });
@@ -160,7 +217,7 @@ class OrderService
                 $oldStatus = $order->status;
                 $order->update(['status' => $data['status']]);
 
-                \Illuminate\Support\Facades\Log::channel('orders')->info("Order #{$order->id} status updated", [
+                Log::channel('orders')->info("Order #{$order->order_number} status updated", [
                     'old_status' => $oldStatus,
                     'new_status' => $data['status'],
                     'updated_by' => \Illuminate\Support\Facades\Auth::id()
@@ -178,7 +235,7 @@ class OrderService
         return DB::transaction(function () use ($order) {
             $order->update(['status' => 'cancelled']);
 
-            Log::channel('orders')->warning("Order #{$order->id} was cancelled", [
+            Log::channel('orders')->warning("Order #{$order->order_number} was cancelled", [
                 'user_id' => Auth::id(),
                 'order_user_id' => $order->user_id
             ]);
@@ -199,7 +256,7 @@ class OrderService
 
     public function generateInvoiceData(Order $order): array
     {
-        $order->load('items.product');
+        $order->loadMissing('items.product');
 
         $items = $order->items->map(function ($item) {
             return [
@@ -218,7 +275,7 @@ class OrderService
         $total = (float) $order->final_amount;
 
         return [
-            'invoice_number' => 'INV-' . $order->id,
+            'invoice_number' => 'INV-' . ($order->order_number ?? $order->id),
             'date' => $order->placed_at?->format('Y-m-d') ?? now()->format('Y-m-d'),
             'coupon_code' => $order->coupon_code,
 
@@ -253,8 +310,9 @@ class OrderService
         return rescue(function () use ($order) {
             $invoiceData = $this->generateInvoiceData($order);
             $pdf = Pdf::loadView('layouts.invoice', ['invoice' => $invoiceData]);
-            Storage::disk('public')->put('invoices/invoice-' . $order->id . '.pdf', $pdf->output());
-            return 'invoices/invoice-' . $order->id . '.pdf';
+            $filename = 'invoices/invoice-' . ($order->order_number ?? $order->id) . '.pdf';
+            Storage::disk('public')->put($filename, $pdf->output());
+            return $filename;
         }, function ($e) {
             Log::error('Invoice generation failed: ' . $e->getMessage());
             return null;
@@ -265,7 +323,7 @@ class OrderService
     {
         $invoiceData = $this->generateInvoiceData($order);
         $pdf = Pdf::loadView('layouts.invoice', ['invoice' => $invoiceData]);
-        $pdf->save(storage_path('app/invoices/invoice-' . $order->id . '.pdf'));
+        $pdf->save(storage_path('app/invoices/invoice-' . ($order->order_number ?? $order->id) . '.pdf'));
         return $pdf->download('invoice.pdf');
     }
 

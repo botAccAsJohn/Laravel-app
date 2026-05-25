@@ -12,7 +12,8 @@ return new class extends Migration {
     {
         Schema::create('orders', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->nullable()->constrained('users')->restrictOnDelete();
+            $table->string('order_number')->unique();
+            $table->foreignId('user_id')->nullable()->constrained('users')->cascadeOnUpdate()->nullOnDelete();
             $table->string('guest_email')->nullable()->index();
             $table->enum('status', [
                 'pending',
@@ -39,7 +40,10 @@ return new class extends Migration {
             $table->decimal('final_amount', 10, 2);
             $table->timestamp('placed_at')->useCurrent()->index();
             $table->string('invoice_path')->nullable();
-            $table->timestamp('updated_at')->useCurrent();
+            $table->foreignId('created_by')->nullable()->constrained('users')->cascadeOnUpdate()->nullOnDelete();
+            $table->foreignId('updated_by')->nullable()->constrained('users')->cascadeOnUpdate()->nullOnDelete();
+            $table->timestamps();
+            $table->softDeletes();
             $table->index(['user_id', 'status', 'placed_at']);
         });
     }

@@ -41,7 +41,7 @@ class OrderShipped extends Notification implements ShouldQueue
      */
     public function failed(\Throwable $exception): void
     {
-        \Illuminate\Support\Facades\Log::error("OrderShipped notification failed for Order #{$this->order->id}: " . $exception->getMessage());
+        \Illuminate\Support\Facades\Log::error("OrderShipped notification failed for Order #{$this->order->order_number}: " . $exception->getMessage());
     }
 
     /**
@@ -56,7 +56,7 @@ class OrderShipped extends Notification implements ShouldQueue
             ->subject(__('Your Order Has Shipped!'))
             ->line(__('Hello :name, your order #:number has been shipped.', [
                 'name' => $notifiable->name,
-                'number' => $this->order->id
+                'number' => $this->order->order_number
             ]))
             ->line(__('Tracking Number: :tracking', ['tracking' => $this->order->tracking_number ?? 'PENDING-123']))
             ->action(__('View Order'), route('orders.show', $this->order))
@@ -65,7 +65,7 @@ class OrderShipped extends Notification implements ShouldQueue
                 'order'        => $this->order,
                 'url'          => route('orders.show', $this->order),
                 'customerName' => $customerName,
-                'orderId'      => $this->order->id,
+                'orderId'      => $this->order->order_number,
                 'orderTotal'   => $this->order->total_amount,
                 'itemsCount'   => $this->order->items->count(),
             ]);
@@ -74,11 +74,11 @@ class OrderShipped extends Notification implements ShouldQueue
     public function toSlack(object $notifiable): SlackMessage
     {
         return (new SlackMessage)
-            ->text('📦 ' . __('Order #:number has been shipped!', ['number' => $this->order->id]))
+            ->text('📦 ' . __('Order #:number has been shipped!', ['number' => $this->order->order_number]))
             ->headerBlock('📦 ' . __('Order Shipped'))
             ->sectionBlock(function ($section) {
                 $section->text(
-                    '*' . __('Order ID') . ':* ' . $this->order->id . '\n' .
+                    '*' . __('Order ID') . ':* ' . $this->order->order_number . '\n' .
                     '*' . __('Tracking Number') . ':* ' . ($this->order->tracking_number ?? 'PENDING') . '\n' .
                     '*' . __('Status') . ':* Shipped'
                 )->markdown();
@@ -98,7 +98,7 @@ class OrderShipped extends Notification implements ShouldQueue
     {
         return [
             "title" => __("Order Shipped"),
-            "message" => __("Your order #:number has been shipped.", ['number' => $this->order->id]),
+            "message" => __("Your order #:number has been shipped.", ['number' => $this->order->order_number]),
             "url" => route('orders.show', $this->order),
             "tracking_number" => $this->order->tracking_number ?? 'PENDING-123',
             "icon_name" => "truck",

@@ -88,12 +88,7 @@
 
             <!-- Settings Dropdown -->
             <div class="hidden sm:flex sm:items-center sm:ms-6 sm:gap-4">
-                @if (auth()->user()->role === 'admin')
-                <a href="{{ route('products.export') }}"
-                    class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none transition ease-in-out duration-150">
-                    {{ __('common.export_products') }}
-                </a>
-                @endif
+
 
                 <!-- Notifications Dropdown -->
                 <div class="relative ms-3">
@@ -121,11 +116,13 @@
                         <x-slot name="content">
                             <div class="px-4 py-2 border-b border-gray-100 font-semibold text-sm text-gray-700">
                                 {{ __('Notifications') }}
-                            </div>
-
-                            @php
-                            $latestNotifications = auth()->user()->notifications()->latest()->limit(10)->get();
+                                @php
+                                $userId = auth()->id();
+                                $latestNotifications = \Illuminate\Support\Facades\Cache::remember("user:{$userId}:notifications:latest", now()->addMinutes(5), function () {
+                                    return auth()->user()->notifications()->latest()->limit(10)->get();
+                                });
                             @endphp
+                            </div>
 
                             <div class="max-h-96 overflow-y-auto">
                                 @forelse ($latestNotifications as $notification)

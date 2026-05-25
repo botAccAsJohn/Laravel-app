@@ -3,7 +3,8 @@
 namespace App\Observers;
 
 use App\Models\Product;
-use Illuminate\Support\Facades\{Cache, Storage};
+use Illuminate\Support\Facades\{Cache, Storage, Auth};
+
 
 
 class ProductObserver
@@ -12,6 +13,7 @@ class ProductObserver
     {
         Cache::forget('products:all');
         Cache::forget('products:count');
+        $product->created_by = Auth::id();
     }
 
     /**
@@ -26,6 +28,7 @@ class ProductObserver
         if ($product->wasChanged('stock') && $product->stock <= 10) {
             event(new \App\Events\Inventory\ProductStockLow($product));
         }
+        $product->updated_by = Auth::id();
     }
 
     /**

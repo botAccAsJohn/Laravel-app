@@ -5,6 +5,22 @@
                 {{ __('admin.command_center') }}
             </h2>
             <div class="flex items-center gap-6">
+                {{-- Import Products Link --}}
+                <a href="{{ route('admin.import.form') }}" class="flex items-center gap-2 group px-4 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl font-bold text-xs transition-all border border-emerald-100 shadow-sm">
+                    <svg class="w-4 h-4 text-emerald-500 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l4-4m0 0l4 4m-4-4v12" />
+                    </svg>
+                    Import Products
+                </a>
+
+                {{-- Export Products Link --}}
+                <a href="{{ route('products.export') }}" class="flex items-center gap-2 group px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl font-bold text-xs transition-all border border-blue-100 shadow-sm">
+                    <svg class="w-4 h-4 text-blue-500 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Export Products
+                </a>
+
                 {{-- Sales Analytics Link --}}
                 <a href="{{ route('admin.analytics.index') }}" class="flex items-center gap-2 group px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl font-bold text-xs transition-all border border-indigo-100 shadow-sm">
                     <svg class="w-4 h-4 text-indigo-500 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">

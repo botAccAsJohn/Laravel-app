@@ -26,7 +26,7 @@ class GenerateInvoice implements ShouldQueue
 
         if ($path) {
             $order->update(['invoice_path' => $path]);
-            Log::channel('orders')->info("Invoice generated for Order #{$order->id}", [
+            Log::channel('orders')->info("Invoice generated for Order #{$order->order_number}", [
                 'path' => $path,
             ]);
         }

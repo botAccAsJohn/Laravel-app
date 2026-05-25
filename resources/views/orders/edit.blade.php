@@ -3,7 +3,7 @@
 @section('content')
 <div class="max-w-2xl mx-auto px-4 py-8">
     <div class="flex items-center justify-between mb-6">
-        <h1 class="text-3xl font-bold text-gray-800">Edit Order</h1>
+        <h1 class="text-3xl font-bold text-gray-800">Edit Order #{{ $order->order_number ?? $order->id }}</h1>
         <a href="{{ route('orders.index') }}" class="text-gray-600 hover:text-gray-900">Back to List</a>
     </div>
 
@@ -22,7 +22,7 @@
         $paymentMethods = ['card', 'upi', 'wallet', 'cod', 'emi', 'netbanking'];
     @endphp
 
-    <form action="{{ route('orders.update', $order->id) }}" method="POST" class="bg-white shadow-md rounded-lg p-6 space-y-4">
+    <form action="{{ route('orders.update', $order) }}" method="POST" class="bg-white shadow-md rounded-lg p-6 space-y-4">
         @csrf
         @method('PUT')
 
