@@ -17,7 +17,7 @@
             
             <div class="flex items-center gap-4">
                 @auth
-                    @if(auth()->user()->role === 'admin')
+                    @if(Auth::guard('admin')->check())
                         <div class="flex items-center gap-2">
                             <a href="{{ route('products.edit', $product->slug) }}" class="text-xs font-bold uppercase tracking-widest text-indigo-600 hover:text-indigo-800 transition">{{ __('products.edit_product') }}</a>
                             <span class="text-slate-200">|</span>

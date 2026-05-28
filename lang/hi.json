@@ -19,5 +19,8 @@
     "View Order": "ऑर्डर देखें",
     "Hello :name, your order #:number has been shipped.": "नमस्ते :name, आपका ऑर्डर #:number भेज दिया गया है।",
     "Thank you for shopping with us!": "हमारे साथ खरीदारी करने के लिए धन्यवाद!",
-    "Order Confirmation - #:number": "ऑर्डर पुष्टिकरण - #:number"
+    "Order Confirmation - #:number": "ऑर्डर पुष्टिकरण - #:number",
+    "Verify Email Address": "ईमेल पता सत्यापित करें",
+    "Please click the button below to verify your email address.": "अपना ईमेल पता सत्यापित करने के लिए कृपया नीचे दिए गए बटन पर क्लिक करें।",
+    "If you did not create an account, no further action is required.": "यदि आपने खाता नहीं बनाया है, तो किसी अतिरिक्त कार्रवाई की आवश्यकता नहीं है।"
 }

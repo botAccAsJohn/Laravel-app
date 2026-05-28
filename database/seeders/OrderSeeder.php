@@ -28,12 +28,16 @@ class OrderSeeder extends Seeder
 
             foreach (range(1, 50) as $i) {
                 // Pre-calculate items and total amount
-                $itemCount = random_int(1, 5);
+                $itemCount = random_int(1, min(5, $products->count()));
+                // Ensure unique products by pulling a random slice/collection of products
+                $selectedProducts = $products->random($itemCount);
+                if ($selectedProducts instanceof \App\Models\Product) {
+                    $selectedProducts = collect([$selectedProducts]);
+                }
                 $totalAmount = 0;
                 $itemsData = [];
 
-                for ($j = 0; $j < $itemCount; $j++) {
-                    $product = $products->random();
+                foreach ($selectedProducts as $product) {
                     $quantity = random_int(1, 5);
                     $unitPrice = (float) ($product->discount_price ?? $product->price);
                     $totalPrice = $quantity * $unitPrice;

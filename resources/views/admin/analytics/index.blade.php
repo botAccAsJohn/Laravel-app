@@ -34,6 +34,43 @@
     <div class="py-8 bg-gray-50/50 min-h-screen">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-8">
 
+            {{-- Date-range filter form --}}
+            <form method="GET" action="{{ route('admin.analytics.index') }}"
+                  class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-wrap gap-4 items-end">
+                <div class="flex flex-col gap-1">
+                    <label class="text-xs font-bold text-gray-400 uppercase tracking-wider">Year</label>
+                    <input type="number" name="year" value="{{ request('year') }}" placeholder="2026"
+                           min="2020" max="2099"
+                           class="w-28 rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                </div>
+                <div class="flex flex-col gap-1">
+                    <label class="text-xs font-bold text-gray-400 uppercase tracking-wider">Month</label>
+                    <input type="number" name="month" value="{{ request('month') }}" placeholder="1–12"
+                           min="1" max="12"
+                           class="w-24 rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                </div>
+                <div class="flex flex-col gap-1">
+                    <label class="text-xs font-bold text-gray-400 uppercase tracking-wider">From</label>
+                    <input type="date" name="from" value="{{ request('from') }}"
+                           class="rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                </div>
+                <div class="flex flex-col gap-1">
+                    <label class="text-xs font-bold text-gray-400 uppercase tracking-wider">To</label>
+                    <input type="date" name="to" value="{{ request('to') }}"
+                           class="rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                </div>
+                <div class="flex gap-2">
+                    <button type="submit"
+                            class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl transition-colors">
+                        Apply Filter
+                    </button>
+                    <a href="{{ route('admin.analytics.index') }}"
+                       class="px-5 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm font-bold rounded-xl transition-colors">
+                        Reset
+                    </a>
+                </div>
+            </form>
+
             <!-- Stats Overview -->
             <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-indigo-50 hover:shadow-md transition-shadow">
@@ -151,7 +188,11 @@
                                 <div class="w-2 h-8 rounded-full bg-indigo-500 group-hover:scale-y-125 transition-transform"></div>
                                 <div>
                                     <span class="block font-bold text-gray-800">{{ $category }}</span>
-                                    <span class="text-xs text-gray-400">{{ number_format($data['quantity']) }} items sold</span>
+                                    <span class="text-xs text-gray-400">
+                                        {{ number_format($data['quantity']) }} items
+                                        &middot;
+                                        {{ number_format($data['order_count'] ?? 0) }} orders
+                                    </span>
                                 </div>
                             </div>
                             <div class="text-right">

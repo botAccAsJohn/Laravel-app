@@ -29,7 +29,7 @@
 
             <div class="flex items-center gap-3">
                 @auth
-                @if(Auth::user()->role === 'admin')
+                @if(Auth::guard('admin')->check())
                 <a href="{{ route('products.create') }}"
                     class="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-2xl bg-slate-900 px-8 py-4 text-sm font-bold text-white transition-all hover:bg-slate-800 hover:shadow-2xl hover:shadow-slate-200 active:scale-95">
                     <span class="relative z-10 transition-transform group-hover:-translate-x-1">{{ __('products.add_product') }}</span>

@@ -2,6 +2,7 @@
 
 namespace App\Listeners\Orders;
 
+use App\Models\Admin;
 use App\Models\User;
 use App\Notifications\{OrderConfirmation, NewOrderReceived};
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -41,8 +42,8 @@ class NotifyOrderPlacedListener implements ShouldQueue
             Notification::route('mail', $order->guest_email)->notify(new OrderConfirmation($order));
         }
 
-        // 2. Notify all admins
-        $admins = User::where('role', 'admin')->get();
+        // 2. Notify all admins (from the dedicated admins table)
+        $admins = Admin::all();
         Notification::send($admins, new NewOrderReceived($order));
 
         Log::channel('orders')->info("Order #{$order->order_number} notifications dispatched", [

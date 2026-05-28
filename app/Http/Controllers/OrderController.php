@@ -17,11 +17,13 @@ class OrderController extends Controller
 
     public function index(Request $request): View
     {
-        $cursor = $request->query('cursor', '');
-        $data = $this->service->getOrdersForUser(Auth::user(), $cursor);
+        $cursor  = $request->query('cursor', '');
+        $isAdmin = Auth::guard('admin')->check();
+        $user    = $isAdmin ? Auth::guard('admin')->user() : Auth::user();
+        $data    = $this->service->getOrdersForUser($user, $cursor, $isAdmin);
 
         return view('orders.index', [
-            'orders' => $data['orders'],
+            'orders'       => $data['orders'],
             'total_orders' => $data['total_orders'],
         ]);
     }
@@ -34,9 +36,9 @@ class OrderController extends Controller
     {
         $user = Auth::user();
         
-        // If the user is an admin, show analytics for ALL orders. Otherwise, only their own.
+        // Admins (admin guard) see all orders; customers see only their own.
         $query = Order::with('items.product');
-        if ($user->role !== 'admin') {
+        if (! Auth::guard('admin')->check()) {
             $query->where('user_id', $user->id);
         }
         $orders = $query->get();
@@ -118,14 +120,14 @@ class OrderController extends Controller
 
     public function show(Order $order): View
     {
-        $this->authorizeAccess($order);
+        $this->authorize('view', $order);
         $order->loadMissing(['user', 'items.product']);
         return view('orders.show', compact('order'));
     }
 
     public function edit(Order $order): View
     {
-        abort_unless(Auth::user()->role === 'admin', 403, 'Only admins can edit orders.');
+        $this->authorize('update', $order);
 
         $order->loadMissing(['items.product']);
 
@@ -142,7 +144,7 @@ class OrderController extends Controller
 
     public function cancel(Order $order): RedirectResponse
     {
-        $this->authorizeAccess($order);
+        $this->authorize('cancel', $order);
 
         if (!in_array($order->status, ['pending', 'confirmed'])) {
             return redirect()->back()->with('error', 'Order cannot be cancelled in its current state.');
@@ -155,7 +157,7 @@ class OrderController extends Controller
 
     public function destroy(Order $order): RedirectResponse
     {
-        abort_unless(Auth::user()->role === 'admin', 403, 'Only admins can delete orders.');
+        $this->authorize('delete', $order);
 
         $this->service->delete($order);
 
@@ -168,7 +170,7 @@ class OrderController extends Controller
             abort(403, 'Invalid or expired invoice link.');
         }
 
-        $this->authorizeAccess($order);
+        $this->authorize('view', $order);
 
         $path = 'invoices/invoice-' . ($order->order_number ?? $order->id) . '.pdf';
 
@@ -253,9 +255,4 @@ class OrderController extends Controller
         }
     }
 
-    private function authorizeAccess(Order $order): void
-    {
-        $user = Auth::user();
-        abort_unless($user->role === 'admin' || $order->user_id === $user->id, 403);
-    }
 }

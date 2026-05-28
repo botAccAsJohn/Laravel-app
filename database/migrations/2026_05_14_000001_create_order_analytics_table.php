@@ -14,6 +14,7 @@ return new class extends Migration {
 
       public function up(): void
       {
+            Schema::dropIfExists('order_analytics');
             Schema::create('order_analytics', function (Blueprint $table) {
                   $table->id();
 

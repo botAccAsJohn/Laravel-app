@@ -9,7 +9,6 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
-use App\Services\PaymentService;
 
 /**
  * Step 1 of the post-checkout chain.
@@ -26,20 +25,9 @@ class ChargePayment implements ShouldQueue
 
     public function __construct(public readonly Order $order) {}
 
-    public function handle(PaymentService $payment): void
+    public function handle(): void
     {
         Log::channel('orders')->info("Chain Step 1 — Charging payment for Order #{$this->order->order_number}");
-
-        // Simulate payment charge (replace with real gateway call)
-        $result = $payment->charge((int) $this->order->final_amount);
-
-        // Mark order as paid
-        $this->order->update([
-            'status'     => 'confirmed',
-            'payment_ref' => $result,
-        ]);
-
-        Log::channel('orders')->info("Chain Step 1 ✓ — Payment confirmed for Order #{$this->order->order_number}. Ref: {$result}");
     }
 
     public function failed(\Throwable $e): void

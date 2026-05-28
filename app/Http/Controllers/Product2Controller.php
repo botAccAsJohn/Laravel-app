@@ -35,6 +35,7 @@ class Product2Controller extends Controller
 
     public function create(): View
     {
+        $this->authorize('create', Product::class);
         $categories = Category::getAllCategoriesFromCache();
         return view('products.create', compact('categories'));
     }
@@ -51,12 +52,14 @@ class Product2Controller extends Controller
 
     public function edit(Product $product): View
     {
+        $this->authorize('update', $product);
         $categories = Category::getAllCategoriesFromCache();
         return view('products.edit', compact('product', 'categories'));
     }
 
     public function store(StoreProductRequest $request)
     {
+        // Authorization is handled by StoreProductRequest::authorize() via ProductPolicy.
         $this->service->create(
             $request->validated(),
             $request->file('image'),
@@ -66,6 +69,7 @@ class Product2Controller extends Controller
 
     public function update(UpdateProductRequest $request, Product $product)
     {
+        // Authorization is handled by UpdateProductRequest::authorize() via ProductPolicy.
         $this->service->update(
             $product,
             $request->validated(),
@@ -77,19 +81,21 @@ class Product2Controller extends Controller
 
     public function destroy(Product $product)
     {
+        $this->authorize('delete', $product);
         $this->service->delete($product);
         return redirect()->route('products.index')->with('success', 'Product deleted.');
     }
 
     public function exportProducts()
     {
+        $this->authorize('create', Product::class); // admin action
         return Excel::Download(new ProductsExport, 'products.csv');
     }
 
     public function logs(\Illuminate\Http\Request $request)
     {
         $logType = $request->query('type', 'products');
-        $validTypes = ['db', 'products', 'orders'];
+        $validTypes = ['db', 'products', 'orders','SlowQuery'];
 
         if (!in_array($logType, $validTypes)) {
             $logType = 'products';
@@ -103,5 +109,5 @@ class Product2Controller extends Controller
         }
 
         return view('logs.index', compact('logs', 'logType'));
-    }
+    }   
 }

@@ -102,12 +102,14 @@
         @endif
 
         <div class="flex flex-wrap gap-4 border-t pt-6">
-            @if(Auth::user()->role === 'admin')
+            @can('update', $order)
                 <a href="{{ route('orders.edit', $order) }}"
                    class="bg-yellow-500 text-white py-2.5 px-6 rounded-lg hover:bg-yellow-600 transition font-medium shadow-sm">
                     Edit Order
                 </a>
+            @endcan
 
+            @can('delete', $order)
                 <form action="{{ route('orders.destroy', $order) }}" method="POST"
                       onsubmit="return confirm('Are you sure you want to delete this order? This action is permanent.');">
                     @csrf
@@ -116,9 +118,10 @@
                         Delete Order
                     </button>
                 </form>
-            @endif
+            @endcan
 
-            @if(Auth::id() === $order->user_id && in_array($status, ['pending', 'confirmed']))
+            @can('cancel', $order)
+                @if(in_array($status, ['pending', 'confirmed']))
                 <form action="{{ route('orders.cancel', $order) }}" method="POST"
                       onsubmit="return confirm('Are you sure you want to cancel this order? This cannot be undone.');">
                     @csrf
@@ -126,7 +129,8 @@
                         Cancel Order
                     </button>
                 </form>
-            @endif
+                @endif
+            @endcan
 
             <div class="flex flex-col items-start gap-1">
                 <a href="{{ URL::temporarySignedRoute('invoices.download', now()->addMinutes(10), ['order' => $order]) }}"

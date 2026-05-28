@@ -276,9 +276,7 @@
 
             </div>
         </div>
-    </div>
-
-    @if(Auth::user()->role === 'admin')
+    </div>    @if(Auth::guard('admin')->check())
     @push('scripts')
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
     <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
@@ -312,7 +310,7 @@
                                 }
                             }).showToast();
                         });
-
+ 
                     // Presence Channel Tracking
                     let activeUsers = [];
                     window.Echo.join('store.browsing')
@@ -328,11 +326,11 @@
                             activeUsers = activeUsers.filter(u => u.id !== user.id);
                             updateBrowsersUI();
                         });
-
+ 
                     function updateBrowsersUI() {
                         const countEl = document.getElementById('active-browsers-count');
                         const listEl = document.getElementById('active-browsers-list');
-                        const currentUserId = {{ Auth::id() }};
+                        const currentUserId = {{ Auth::guard('admin')->id() ?? 'null' }};
 
                         if (countEl) countEl.textContent = activeUsers.length;
                         if (!listEl) return;

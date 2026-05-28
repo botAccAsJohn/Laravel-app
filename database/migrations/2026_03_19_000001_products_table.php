@@ -34,7 +34,9 @@ return new class extends Migration
             $table->timestamps();
             $table->foreignId('created_by')->nullable()->constrained('users')->cascadeOnUpdate()->nullOnDelete();
             $table->foreignId('updated_by')->nullable()->constrained('users')->cascadeOnUpdate()->nullOnDelete();
-            $table->fullText(['name', 'description']);
+            if (Schema::getConnection()->getDriverName() !== 'sqlite') {
+                $table->fullText(['name', 'description']);
+            }
             $table->softDeletes();
             $table->index(['category_id', 'is_active', 'created_at']);
         });

@@ -22,14 +22,18 @@ class NotificationTest extends TestCase
     {
         Notification::fake();
 
-        $admin = User::factory()->create(['role' => 'admin']);
+        $admin = \App\Models\Admin::create([
+            'name' => 'Admin One',
+            'email' => 'admin@example.com',
+            'password' => bcrypt('password'),
+        ]);
         $user = User::factory()->create(['role' => 'user']);
         $order = Order::factory()->create([
             'user_id' => $user->id,
             'status' => 'confirmed'
         ]);
 
-        $this->actingAs($admin)
+        $this->actingAs($admin, 'admin')
             ->patch(route('orders.update', $order), [
                 'status' => 'shipped'
             ]);
@@ -50,14 +54,18 @@ class NotificationTest extends TestCase
     {
         Notification::fake();
 
-        $admin = User::factory()->create(['role' => 'admin']);
+        $admin = \App\Models\Admin::create([
+            'name' => 'Admin Two',
+            'email' => 'admin2@example.com',
+            'password' => bcrypt('password'),
+        ]);
         $user = User::factory()->create(['role' => 'user']);
         $order = Order::factory()->create([
             'user_id' => $user->id,
             'status' => 'confirmed'
         ]);
 
-        $this->actingAs($admin)
+        $this->actingAs($admin, 'admin')
             ->patch(route('orders.update', $order), [
                 'status' => 'processing'
             ]);

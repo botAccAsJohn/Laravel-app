@@ -4,13 +4,14 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\{Gate, Storage};
 use Carbon\Carbon;
 
 class ReportManagerController extends Controller
 {
     public function index()
     {
+        Gate::authorize('manage-reports');
         $disk = Storage::disk('reports');
         $files = $disk->files();
 
@@ -29,6 +30,7 @@ class ReportManagerController extends Controller
 
     public function archive(Request $request)
     {
+        Gate::authorize('manage-reports');
         $file = $request->input('file');
         $disk = Storage::disk('reports');
 
@@ -46,6 +48,7 @@ class ReportManagerController extends Controller
 
     public function bulkCleanup()
     {
+        Gate::authorize('manage-reports');
         $disk = Storage::disk('reports');
         $files = $disk->files();
 

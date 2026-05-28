@@ -10,9 +10,10 @@
         <form method="GET" action="{{ route('logs.index') }}" class="flex items-center space-x-3 bg-white p-2 rounded-lg shadow-sm border border-gray-100">
             <label for="type" class="text-gray-700 font-medium whitespace-nowrap">View Log:</label>
             <select name="type" id="type" onchange="this.form.submit()" class="form-select block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                <option value="products" {{ $logType === 'products' ? 'selected' : '' }}>Products</option>
-                <option value="db" {{ $logType === 'db' ? 'selected' : '' }}>Database (DB)</option>
-                <option value="orders" {{ $logType === 'orders' ? 'selected' : '' }}>Orders</option>
+                <option value="Products" {{ $logType === 'Products' ? 'selected' : '' }}>Products</option>
+                <option value="DB" {{ $logType === 'DB' ? 'selected' : '' }}>Database (DB)</option>
+                <option value="SlowQuery" {{ $logType === 'SlowQuery' ? 'selected' : '' }}>Slow Queries</option>
+                <option value="Orders" {{ $logType === 'Orders' ? 'selected' : '' }}>Orders</option>
             </select>
         </form>
     </div>

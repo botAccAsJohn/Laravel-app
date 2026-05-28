@@ -1,6 +1,6 @@
 @auth
 @php
-$isAdmin = Auth::user()->role === 'admin';
+$isAdmin = Auth::guard('admin')->check();
 $userId = Auth::id();
 @endphp
 

@@ -11,7 +11,7 @@
             </div>
 
             <div class="flex items-center gap-3">
-                @if(Auth::user()->role === 'admin')
+                                            @if(Auth::guard('admin')->check())
                 <a href="{{ route('orders.analytics') }}"
                     class="inline-flex items-center justify-center bg-white text-indigo-700 border border-indigo-100 px-4 py-2 rounded-lg hover:bg-indigo-50 transition font-bold shadow-sm">
                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -54,6 +54,11 @@
                                     Payment</th>
                                 <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                                     Amount</th>
+                                                            @if(Auth::guard('admin')->check())
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
+                                    title="Most recent order total for this customer (correlated subquery)">
+                                    Last Order ↓</th>
+                                @endif
                                 <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                                     Placed At</th>
                                 <th class="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -97,6 +102,21 @@
                                             @endif
                                         </div>
                                     </td>
+                                                                @if(Auth::guard('admin')->check())
+                                    <td class="px-6 py-4 align-top">
+                                        {{-- last_order_amount is a virtual column injected by addSelect() + correlated
+                                             subquery in OrderService::getCustomerList(). It is NULL when the order
+                                             was loaded via getOrdersForUser() — guard with ?:. --}}
+                                        @if(isset($order->last_order_amount))
+                                            <div class="text-sm font-semibold text-indigo-700">
+                                                @currency($order->last_order_amount)
+                                            </div>
+                                            <div class="text-[10px] text-gray-400 uppercase tracking-widest">last order</div>
+                                        @else
+                                            <span class="text-xs text-gray-300">&mdash;</span>
+                                        @endif
+                                    </td>
+                                    @endif
                                     <td class="px-6 py-4 align-top text-sm text-gray-600">
                                         {{ optional($order->placed_at)->format('d M Y, h:i A') ?? 'Not placed yet' }}
                                     </td>
@@ -107,7 +127,7 @@
                                                 View
                                             </a>
 
-                                            @if(Auth::user()->role === 'admin')
+                                                                        @if(Auth::guard('admin')->check())
                                                 <a href="{{ route('orders.edit', $order) }}"
                                                     class="bg-yellow-500 text-white px-3 py-1.5 rounded-lg hover:bg-yellow-600 transition whitespace-nowrap">
                                                     Edit

@@ -137,6 +137,13 @@ return [
             'days' => 3,
         ],
 
+        'security' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/security.log'),
+            'level' => 'warning',
+            'replace_placeholders' => true,
+        ],
+
         'products' => [
             'driver' => 'daily',
             'path' => storage_path('logs/products/products.log'),
@@ -154,6 +161,12 @@ return [
         'DBInteraction' => [
             'driver' => 'daily',
             'path' => storage_path('logs/db/db.log'),
+            'level' => 'debug',
+            'days' => 3,
+        ],
+        'SlowQueries' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/db/slow/db.log'),
             'level' => 'debug',
             'days' => 3,
         ],

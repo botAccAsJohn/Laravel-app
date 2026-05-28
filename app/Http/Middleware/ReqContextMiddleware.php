@@ -17,11 +17,12 @@ class ReqContextMiddleware
     {
         // Generate request ID
         $requestId = (string) Str::ulid();
-        $user = $request->user();
+        $isAdmin = Auth::guard('admin')->check();
+        $user = $isAdmin ? Auth::guard('admin')->user() : $request->user();
 
         Context::add('request_id', $requestId);
         Context::add('user_id', $user?->id);
-        Context::add('user_type', $user?->role ?? 'user');
+        Context::add('user_type', $isAdmin ? 'admin' : ($user?->role ?? 'user'));
         Context::add('ip_address', $request->ip());
 
         $userType = Context::get('user_type', 'customer');

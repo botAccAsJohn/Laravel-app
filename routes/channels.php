@@ -7,14 +7,15 @@ Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
     return (int) $user->id === (int) $id;
 });
 Broadcast::channel('admin.orders', function ($user) {
-    return $user->role === 'admin';
-});
+    return $user instanceof \App\Models\Admin;
+}, ['guards' => ['admin']]);
+
 Broadcast::channel('order.{orderId}', function ($user, $orderId) {
     $order = \Illuminate\Support\Facades\Cache::remember("orders:id:{$orderId}", now()->addMinutes(30), function () use ($orderId) {
         return Order::find($orderId);
     });
-    return $order && $order->user_id === $user->id;
-});
+    return $order && (int) $order->user_id === (int) $user->id;
+}, ['guards' => ['web']]);
 
 Broadcast::channel('store.browsing', function ($user) {
     // We can extract the current page from the referer header 
@@ -27,4 +28,4 @@ Broadcast::channel('store.browsing', function ($user) {
         'name' => $user->name,
         'path' => $path ?: '/'
     ];
-});
+}, ['guards' => ['web', 'admin']]);

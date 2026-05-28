@@ -29,4 +29,13 @@ return [
     'cold' => 'Cold',
     'permanent' => 'Permanent',
     'active_now' => 'Active Now',
+
+    // ── Login page ──────────────────────────────────────────────────────
+    'login_title'    => 'Admin Portal — :app',
+    'login_subtitle' => 'Sign in to the administration panel.',
+    'login_failed'   => 'Authentication failed',
+    'email'          => 'Email address',
+    'password'       => 'Password',
+    'remember_me'    => 'Keep me signed in',
+    'sign_in'        => 'Sign in',
 ];

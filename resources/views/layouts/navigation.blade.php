@@ -1,3 +1,26 @@
+{{-- ── Exercise 49.3: Impersonation Banner ───────────────────────────── --}}
+{{-- Shown only when an admin has switched into a customer session        --}}
+@if(session('impersonating_admin_id'))
+<div class="bg-amber-400 text-amber-950 text-sm font-semibold px-4 py-2 flex items-center justify-between gap-4 shadow">
+    <span class="flex items-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/>
+        </svg>
+        ⚠️ You are impersonating
+        <strong>{{ auth()->user()?->name ?? 'a customer' }}</strong>
+        ({{ auth()->user()?->email }}) as Admin.
+    </span>
+    <form method="POST" action="{{ route('admin.impersonate.stop') }}">
+        @csrf
+        <button type="submit"
+                class="px-3 py-1 rounded-lg bg-amber-900 text-amber-100 text-xs font-bold hover:bg-amber-950 transition">
+            ✕ Stop Impersonating
+        </button>
+    </form>
+</div>
+@endif
+
 <nav x-data="{ open: false }" class="bg-white border-b border-gray-100">
     <!-- Primary Navigation Menu -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -6,7 +29,7 @@
 
                 <!-- Navigation Links -->
                 <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                    @if (auth()->user()->role === 'admin')
+            @if (Auth::guard('admin')->check())
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                         {{ __('common.admin_panel') }}
                     </x-nav-link>
@@ -31,7 +54,7 @@
                     <x-nav-link :href="route('recently.index')" :active="request()->routeIs('recently.*')">
                         {{ __('common.recently_viewed') }}
                     </x-nav-link>
-                    @if (auth()->user()->role === 'admin')
+            @if (Auth::guard('admin')->check())
                     <x-nav-link :href="route('logs.index')" :active="request()->routeIs('logs.*')">
                         {{ __('common.logs') }}
                     </x-nav-link>
@@ -100,8 +123,8 @@
                                 </svg>
 
                                 @php
-                                $unreadCount = \Illuminate\Support\Facades\Cache::remember('unread_count_' . auth()->id(), 60, function () {
-                                return auth()->user()->unreadNotifications()->count();
+                                $unreadCount = \Illuminate\Support\Facades\Cache::remember('unread_count_' . (auth()->id() ?? 0), 60, function () {
+                                    return auth()->user()?->unreadNotifications()->count() ?? 0;
                                 });
                                 @endphp
 
@@ -118,9 +141,9 @@
                                 {{ __('Notifications') }}
                                 @php
                                 $userId = auth()->id();
-                                $latestNotifications = \Illuminate\Support\Facades\Cache::remember("user:{$userId}:notifications:latest", now()->addMinutes(5), function () {
-                                    return auth()->user()->notifications()->latest()->limit(10)->get();
-                                });
+                                $latestNotifications = $userId ? \Illuminate\Support\Facades\Cache::remember("user:{$userId}:notifications:latest", now()->addMinutes(5), function () {
+                                    return auth()->user()?->notifications()->latest()->limit(10)->get() ?? collect();
+                                }) : collect();
                             @endphp
                             </div>
 
@@ -175,6 +198,10 @@
                             {{ __('common.profile') }}
                         </x-dropdown-link>
 
+                        <x-dropdown-link :href="route('devices.index')">
+                            🔑 {{ __('API Tokens') }}
+                        </x-dropdown-link>
+
                         <!-- Authentication -->
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
@@ -206,7 +233,7 @@
 
     <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden">
         <div class="pt-2 pb-3 space-y-1">
-            @if (auth()->user()->role === 'admin')
+            @if (Auth::guard('admin')->check())
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                 {{ __('common.admin_panel') }}
             </x-responsive-nav-link>
@@ -217,8 +244,8 @@
             <x-responsive-nav-link :href="route('notifications.index')" :active="request()->routeIs('notifications.index')">
                 {{ __('Notifications') }}
                 @php
-                $unreadCount = \Illuminate\Support\Facades\Cache::remember('unread_count_' . auth()->id(), 60, function () {
-                return auth()->user()->unreadNotifications()->count();
+                $unreadCount = \Illuminate\Support\Facades\Cache::remember('unread_count_' . (auth()->id() ?? 0), 60, function () {
+                    return auth()->user()?->unreadNotifications()->count() ?? 0;
                 });
                 @endphp
                 @if ($unreadCount > 0)
@@ -240,6 +267,10 @@
 
                 <x-responsive-nav-link :href="route('profile.edit')">
                     {{ __('common.profile') }}
+                </x-responsive-nav-link>
+
+                <x-responsive-nav-link :href="route('devices.index')" :active="request()->routeIs('devices.*')">
+                    🔑 {{ __('API Tokens') }}
                 </x-responsive-nav-link>
 
                 <!-- Authentication -->

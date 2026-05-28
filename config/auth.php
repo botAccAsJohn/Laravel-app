@@ -40,6 +40,11 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+        'admin' => [
+            'driver' => 'session',
+            'provider' => 'admins',
+        ],
+
     ],
 
     /*
@@ -60,15 +65,18 @@ return [
     */
 
     'providers' => [
+        // Customer provider — respects AUTH_MODEL for flexibility in testing.
         'users' => [
             'driver' => 'redis-eloquent',
-            'model' => env('AUTH_MODEL', App\Models\User::class),
+            'model'  => env('AUTH_MODEL', App\Models\User::class),
         ],
 
-        // 'users' => [
-        //     'driver' => 'database',
-        //     'table' => 'users',
-        // ],
+        // Admin provider — intentionally hardcoded; it must NEVER resolve to
+        // the User model even if AUTH_MODEL is overridden in .env.
+        'admins' => [
+            'driver' => 'redis-eloquent',
+            'model'  => App\Models\Admin::class,
+        ],
     ],
 
     /*
@@ -111,5 +119,10 @@ return [
     */
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
+
+    // ── Exercise 50.1: Gate::before — super-admin email list ────────────────
+    // Comma-separated admin emails that bypass ALL gate checks.
+    // Set in .env: SUPER_ADMIN_EMAILS=admin@example.com,root@example.com
+    'super_admin_emails' => env('SUPER_ADMIN_EMAILS', ''),
 
 ];

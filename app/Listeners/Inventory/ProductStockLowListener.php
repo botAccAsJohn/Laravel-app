@@ -3,7 +3,7 @@
 namespace App\Listeners\Inventory;
 
 use App\Events\Inventory\ProductStockLow;
-use App\Models\User;
+use App\Models\Admin;
 use App\Notifications\ProductLowStock;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Support\Facades\Cache;
@@ -28,7 +28,7 @@ class ProductStockLowListener implements ShouldQueue
 
         Cache::put($key, true, now()->addHour());
 
-        $admins = User::where('role', 'admin')->get();
+        $admins = Admin::all();
         Notification::send($admins, new ProductLowStock($product));
     }
 }

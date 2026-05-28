@@ -12,5 +12,8 @@
     "Shopping Cart": "سلة التسوق",
     "Proceed to Buy": "المتابعة للشراء",
     "Welcome": "أهلاً بك",
-    "Welcome, :name": "أهلاً بك، :name"
+    "Welcome, :name": "أهلاً بك، :name",
+    "Verify Email Address": "تأكيد عنوان البريد الإلكتروني",
+    "Please click the button below to verify your email address.": "يرجى النقر فوق الزر أدناه لتأكيد عنوان بريدك الإلكتروني.",
+    "If you did not create an account, no further action is required.": "إذا لم تقم بإنشاء حساب، فلا داعي لاتخاذ أي إجراء آخر."
 }

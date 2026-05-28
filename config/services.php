@@ -68,4 +68,12 @@ return [
         'retry' => env('EXTERNAL_API_RETRY', 3),
     ],
 
+    // ── Exercise 49.4 — hCaptcha (brute-force CAPTCHA gate) ────────────────
+    // Set HCAPTCHA_SECRET and HCAPTCHA_SITEKEY in .env.
+    // Leave blank in local dev to skip verification automatically.
+    'hcaptcha' => [
+        'secret'   => env('HCAPTCHA_SECRET'),
+        'sitekey'  => env('HCAPTCHA_SITEKEY'),
+    ],
+
 ];
