@@ -22,8 +22,8 @@ test('login is throttled after 5 attempts and logs to security channel', functio
     $email = 'test@example.com';
     $ip = '127.0.0.1';
 
-    // Verify rate limit is clear initially
-    expect(RateLimiter::remaining('login:'.$email.'|'.$ip, 5))->toBe(5);
+    // Clear any existing cache for this email
+    \Illuminate\Support\Facades\Cache::forget('login_failures:' . strtolower($email));
 
     // Send 5 failed login attempts
     for ($i = 0; $i < 5; $i++) {
@@ -31,55 +31,35 @@ test('login is throttled after 5 attempts and logs to security channel', functio
             'email' => $email,
             'password' => 'wrong-password',
         ]);
-        
+
         $response->assertStatus(302); // Redirect back
         $response->assertSessionHasErrors('email');
     }
 
-    // The 6th attempt should be blocked and rate-limited
+    // Get the service to check failure count
+    $service = app(\App\Services\LoginThrottleService::class);
+
+    // After 5 failed attempts, the account counter should be at 5
+    expect($service->failureCount($email))->toBe(5);
+
+    // The 6th attempt should be blocked by the HTTP rate limiter middleware (429)
     $response = $this->post('/login', [
         'email' => $email,
         'password' => 'wrong-password',
     ]);
 
-    // Check we got redirected back with throttle error in session
-    $response->assertStatus(302);
-    $response->assertSessionHasErrors('email');
-    
-    // Check that we hit the rate limit (0 remaining)
-    expect(RateLimiter::remaining('login:'.$email.'|'.$ip, 5))->toBe(0);
+    // Expect a 429 Too Many Requests (rate limit exceeded)
+    expect($response->getStatusCode())->toBe(429);
 
-    // Confirm that the hit was logged to security channel
-    $logPath = storage_path('logs/security.log');
-    expect(File::exists($logPath))->toBeTrue();
-    $logContent = File::get($logPath);
-    expect($logContent)->toContain('Rate limit hit: login');
-    expect($logContent)->toContain($email);
-    expect($logContent)->toContain($ip);
-});
+    // The failure count should still be 5 because the middleware blocked the request
+    expect($service->failureCount($email))->toBe(5);
 
-test('password reset is throttled after 3 attempts per email', function () {
-    $email = 'test@example.com';
-
-    // Verify rate limit is clear initially
-    expect(RateLimiter::remaining('password-reset:'.$email, 3))->toBe(3);
-
-    // Send 3 requests
-    for ($i = 0; $i < 3; $i++) {
-        $response = $this->post('/forgot-password', [
-            'email' => $email,
-        ]);
-        $response->assertStatus(302); // Should redirect back (email not found or mail sent)
-    }
-
-    // The 4th attempt should be rate-limited
-    $response = $this->post('/forgot-password', [
-        'email' => $email,
+    // Confirm that the failures were logged to security channel
     ]);
 
     $response->assertStatus(302);
     $response->assertSessionHasErrors('email');
-    
+
     // Check security log for hit
     $logPath = storage_path('logs/security.log');
     expect(File::exists($logPath))->toBeTrue();

@@ -69,40 +69,6 @@ class RedisUserProvider extends EloquentUserProvider
         return parent::retrieveByCredentials($credentials);
     }
 
-    /**
-     * Password validation.
-     *
-     * Exercise 53.2 — Transparent rehashing (bcrypt → argon2id migration)
-     * ───────────────────────────────────────────────────────────────────
-     * Why Hash::check() not ==
-     * ─────────────────────────
-     * Hash::check() delegates to PHP's password_verify(), which uses a
-     * CONSTANT-TIME comparison to prevent timing side-channel attacks.
-     *
-     * With a normal string comparison ($a == $b or strcmp), PHP returns as
-     * soon as the first differing byte is found. An attacker who can measure
-     * HTTP response latency with microsecond precision can learn HOW CLOSE
-     * their guess is to the real hash (the longer the match, the longer the
-     * response). Constant-time comparison always examines every byte,
-     * so response time reveals NOTHING about partial matches.
-     *
-     * Migration strategy: bcrypt → argon2id
-     * ──────────────────────────────────────
-     * 1. Set HASH_DRIVER=argon2id in .env (or config/hashing.php).
-     * 2. DO NOT run a bulk password update — plain-text passwords are not
-     *    stored anywhere, so you cannot re-hash without user interaction.
-     * 3. On every SUCCESSFUL login:
-     *    a. Hash::check($plain, $stored_hash) verifies the old bcrypt hash.
-     *    b. Hash::needsRehash($stored_hash) returns TRUE because the stored
-     *       hash has a different algorithm identifier (\$2y\$ vs \$argon2id\$)
-     *       or different parameters.
-     *    c. We call Hash::make($plain) to create a new argon2id hash and
-     *       silently save it to the DB. The user never sees this.
-     * 4. Over time, as users log in, their hashes are transparently upgraded.
-     *    Users who never log in keep their bcrypt hashes — still safe, just
-     *    not upgraded. A forced-reset policy (Exercise 52.3) can be used to
-     *    flush remaining bcrypt users if required by compliance.
-     */
     public function validateCredentials(Authenticatable $user, array $credentials): bool
     {
         // If user came from Redis (no password cached), re-fetch fresh from DB.
@@ -117,12 +83,9 @@ class RedisUserProvider extends EloquentUserProvider
             $valid = parent::validateCredentials($user, $credentials);
         }
 
-        // ── Exercise 53.2: Transparent rehash on successful login ────────────
-        // Only rehash if credentials are VALID. We never touch passwords on
-        // failed logins (that would open a denial-of-service vector).
         if ($valid && $this->hasher->needsRehash($user->getAuthPassword())) {
             // Re-fetch the plain password from the submitted credentials.
-            $plain   = $credentials['password'];
+            $plain = $credentials['password'];
             $newHash = $this->hasher->make($plain);
 
             // Persist the new hash (silently, in the background of the request).
@@ -137,7 +100,7 @@ class RedisUserProvider extends EloquentUserProvider
             \Illuminate\Support\Facades\Log::channel('security')->info(
                 '[Hash] Password transparently rehashed on login',
                 [
-                    'user_id'  => $user->getAuthIdentifier(),
+                    'user_id' => $user->getAuthIdentifier(),
                     'old_algo' => $this->detectAlgo($user->getAuthPassword()),
                     'new_algo' => config('hashing.driver'),
                 ]
@@ -152,10 +115,10 @@ class RedisUserProvider extends EloquentUserProvider
      */
     private function detectAlgo(string $hash): string
     {
-        return match(true) {
+        return match (true) {
             str_starts_with($hash, '$2y$') || str_starts_with($hash, '$2b$') => 'bcrypt',
             str_starts_with($hash, '$argon2id$') => 'argon2id',
-            str_starts_with($hash, '$argon2i$')  => 'argon2i',
+            str_starts_with($hash, '$argon2i$') => 'argon2i',
             default => 'unknown',
         };
     }
@@ -166,9 +129,6 @@ class RedisUserProvider extends EloquentUserProvider
         return parent::retrieveByToken($identifier, $token);
     }
 
-    // Helper: Extract only safe fields from model
-    // If the model declares getAuthCacheFields(), use that list.
-    // This keeps the provider generic and lets each model own its schema.
     protected function extractCacheData(Authenticatable $user): array
     {
         $fields = method_exists($user, 'getAuthCacheFields')

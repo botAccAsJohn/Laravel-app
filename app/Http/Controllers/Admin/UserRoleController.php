@@ -1,7 +1,4 @@
 <?php
-// app/Http/Controllers/Admin/UserRoleController.php
-// Exercise 50.4 — Admin UI for assigning/revoking roles.
-
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
@@ -38,38 +35,31 @@ class UserRoleController extends Controller
 
         $user->load('roles.permissions');
 
-        $roles       = Role::with('permissions')->orderBy('display_name')->get();
+        $roles = Role::with('permissions')->orderBy('display_name')->get();
         $userRoleIds = $user->roles->pluck('id')->toArray();
 
         return view('admin.users.edit_roles', compact('user', 'roles', 'userRoleIds'));
     }
 
-    /**
-     * Assign or revoke roles for a user.
-     *
-     * Every change is audit-logged to the security channel with:
-     *   - which admin performed the action
-     *   - which user was affected
-     *   - which roles were added and removed
-     */
+
     public function update(Request $request, User $user): RedirectResponse
     {
         Gate::authorize('manage_users');
 
         $request->validate([
-            'roles'   => ['nullable', 'array'],
+            'roles' => ['nullable', 'array'],
             'roles.*' => ['integer', 'exists:roles,id'],
         ]);
 
-        $newRoleIds = collect($request->input('roles', []))->map(fn ($id) => (int) $id);
+        $newRoleIds = collect($request->input('roles', []))->map(fn($id) => (int) $id);
         $oldRoleIds = $user->roles->pluck('id');
 
-        $added   = $newRoleIds->diff($oldRoleIds);
+        $added = $newRoleIds->diff($oldRoleIds);
         $removed = $oldRoleIds->diff($newRoleIds);
 
         // Sync the pivot — this inserts/deletes as needed.
         // We manually attach with assigned_by so the audit trail is on the pivot.
-        $syncData = $newRoleIds->mapWithKeys(fn ($id) => [
+        $syncData = $newRoleIds->mapWithKeys(fn($id) => [
             $id => [
                 'assigned_by' => Auth::guard('admin')->id(),
                 'assigned_at' => now(),
@@ -82,16 +72,16 @@ class UserRoleController extends Controller
         $user->forgetPermissionsCache();
 
         // ── Audit log ────────────────────────────────────────────────────────
-        $admin        = Auth::guard('admin')->user();
-        $addedNames   = Role::whereIn('id', $added)->pluck('name')->toArray();
+        $admin = Auth::guard('admin')->user();
+        $addedNames = Role::whereIn('id', $added)->pluck('name')->toArray();
         $removedNames = Role::whereIn('id', $removed)->pluck('name')->toArray();
 
         Log::channel('security')->info('[RBAC] Role assignment changed', [
-            'admin_email'   => $admin?->email ?? 'unknown',
-            'admin_id'      => $admin?->id,
-            'user_email'    => $user->email,
-            'user_id'       => $user->id,
-            'roles_added'   => $addedNames,
+            'admin_email' => $admin?->email ?? 'unknown',
+            'admin_id' => $admin?->id,
+            'user_email' => $user->email,
+            'user_id' => $user->id,
+            'roles_added' => $addedNames,
             'roles_removed' => $removedNames,
         ]);
 
@@ -124,8 +114,8 @@ class UserRoleController extends Controller
 
         Log::channel('security')->info('[RBAC] Role assigned', [
             'admin_email' => Auth::guard('admin')->user()?->email,
-            'user_email'  => $user->email,
-            'role'        => $role->name,
+            'user_email' => $user->email,
+            'role' => $role->name,
         ]);
 
         return back()->with('success', "Role '{$role->display_name}' assigned to {$user->name}.");
@@ -148,8 +138,8 @@ class UserRoleController extends Controller
 
         Log::channel('security')->info('[RBAC] Role revoked', [
             'admin_email' => Auth::guard('admin')->user()?->email,
-            'user_email'  => $user->email,
-            'role'        => $role->name,
+            'user_email' => $user->email,
+            'role' => $role->name,
         ]);
 
         return back()->with('success', "Role '{$role->display_name}' revoked from {$user->name}.");
@@ -170,9 +160,9 @@ class UserRoleController extends Controller
 
         Log::channel('security')->info('[ManualAuth] Admin generated magic link', [
             'admin_email' => Auth::guard('admin')->user()?->email,
-            'user_email'  => $user->email,
-            'user_id'     => $user->id,
-            'ip'          => $request->ip(),
+            'user_email' => $user->email,
+            'user_id' => $user->id,
+            'ip' => $request->ip(),
         ]);
 
         return back()->with('magic_link', $url)->with('magic_link_user', $user->name);

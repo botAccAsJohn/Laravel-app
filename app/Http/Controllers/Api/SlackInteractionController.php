@@ -7,12 +7,7 @@ use App\Models\SupportTicket;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\{Http, Log};
 
-/**
- * Handles interactive Slack actions (button clicks) from support ticket notifications.
- *
- * Protected by VerifySlackSignature middleware (validates HMAC against the signing secret).
- * Updates ticket status and posts a confirmation message back to the Slack thread.
- */
+
 class SlackInteractionController extends Controller
 {
     public function handle(Request $request)
@@ -21,7 +16,7 @@ class SlackInteractionController extends Controller
         $payload = json_decode($request->input('payload'), true);
 
         // URL-based actions (from simple link buttons) come as query params
-        $action   = $payload['actions'][0]['action_id'] ?? $request->query('action');
+        $action = $payload['actions'][0]['action_id'] ?? $request->query('action');
         $ticketId = $request->query('ticket_id') ?? ($payload['actions'][0]['value'] ?? null);
 
         if (!$action || !$ticketId) {
@@ -32,18 +27,18 @@ class SlackInteractionController extends Controller
 
         $update = match ($action) {
             'assign' => [
-                'status'      => 'assigned',
+                'status' => 'assigned',
                 'assigned_to' => auth()->id(),
-                'message'     => '✅ Ticket assigned to ' . (auth()->user()->name ?? 'an admin'),
+                'message' => '✅ Ticket assigned to ' . (auth()->user()->name ?? 'an admin'),
             ],
             'in_progress' => [
-                'status'  => 'in_progress',
+                'status' => 'in_progress',
                 'message' => '🔄 Ticket marked as in progress',
             ],
             'close' => [
-                'status'    => 'closed',
+                'status' => 'closed',
                 'closed_at' => now(),
-                'message'   => '🔒 Ticket closed',
+                'message' => '🔒 Ticket closed',
             ],
             default => null,
         };
@@ -67,7 +62,7 @@ class SlackInteractionController extends Controller
 
         return response()->json([
             'response_action' => 'clear',
-            'text'            => $message,
+            'text' => $message,
         ]);
     }
 
@@ -89,9 +84,9 @@ class SlackInteractionController extends Controller
 
         rescue(function () use ($payload, $message, $ticket, $token) {
             Http::withToken($token)->post('https://slack.com/api/chat.postMessage', [
-                'channel'   => $payload['channel']['id'],
+                'channel' => $payload['channel']['id'],
                 'thread_ts' => $payload['message']['ts'],
-                'text'      => "{$message} — Ticket #{$ticket->id} ({$ticket->status})",
+                'text' => "{$message} — Ticket #{$ticket->id} ({$ticket->status})",
             ]);
         }, function ($e) {
             Log::channel('admin')->error('Failed to post Slack thread reply: ' . $e->getMessage());

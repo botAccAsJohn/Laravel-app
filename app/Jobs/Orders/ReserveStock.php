@@ -11,22 +11,16 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\{DB, Log};
 use App\Exceptions\ProductOutOfStockException;
 
-/**
- * Step 2 of the post-checkout chain.
- * Decrements stock for every item in the order inside a DB transaction.
- * If ANY product is out of stock, throws an exception — payment will
- * need to be refunded manually (chain catch() handles the alert).
- *
- * unless() use-case: this step is skipped for digital/virtual orders
- * (see OrderService where ->unless($order->is_digital) is applied).
- */
+
 class ReserveStock implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries = 2;
 
-    public function __construct(public readonly Order $order) {}
+    public function __construct(public readonly Order $order)
+    {
+    }
 
     public function handle(): void
     {

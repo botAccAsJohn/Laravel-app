@@ -10,12 +10,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 
-/**
- * Step 1 of the post-checkout chain.
- * Charges the customer via PaymentService.
- * If this fails, the whole chain stops — stock is never reserved,
- * no invoice is generated, and no confirmation email is sent.
- */
+
 class ChargePayment implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
@@ -23,7 +18,9 @@ class ChargePayment implements ShouldQueue
     public int $tries = 3;
     public int $backoff = 10; // seconds between retries
 
-    public function __construct(public readonly Order $order) {}
+    public function __construct(public readonly Order $order)
+    {
+    }
 
     public function handle(): void
     {

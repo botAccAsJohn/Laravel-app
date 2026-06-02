@@ -9,14 +9,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class SetLocale
 {
-    /**
-     * Handle an incoming request.
-     *
-     * Priority chain for locale resolution:
-     * 1. Authenticated user's database preference (preferred_locale)
-     * 2. Session value ('locale')
-     * 3. Application configuration default (config('app.locale'))
-     */
+
     public function handle(Request $request, Closure $next): Response
     {
         // 1. Runtime switcher via query string (persists to session and DB)

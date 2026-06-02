@@ -97,3 +97,8 @@ Exe Remainig : Exercise 46.3 - Job Batching
 Exe Remainig : Exercise 46
 
 impersonation related issue are not solved !!!
+
+===========================================================
+
+• impersonate-user has few things to Polish
+• Full role/permission system with admin UI for assignment

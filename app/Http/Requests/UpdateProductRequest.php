@@ -1,6 +1,4 @@
 <?php
-// app/Http/Requests/UpdateProductRequest.php
-// Exercise 50.3 — Authorization centralised in FormRequest.
 
 namespace App\Http\Requests;
 
@@ -9,14 +7,7 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateProductRequest extends FormRequest
 {
-    /**
-     * Only admins may update products.
-     *
-     * $this->route('product') resolves the route-model bound Product instance,
-     * so we pass the actual object — not just the class. This invokes
-     * ProductPolicy::update(?User $user, Product $product) which checks the
-     * admin guard and runs through the policy's before() bypass.
-     */
+
     public function authorize(): bool
     {
         $product = $this->route('product');

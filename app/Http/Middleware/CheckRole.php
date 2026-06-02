@@ -9,11 +9,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class CheckRole
 {
-    /**
-     * The `role:admin` syntax is now deprecated in favour of the `auth:admin`
-     * guard middleware. This middleware is kept for any legacy `role:*` usages
-     * but routes should be migrated to use `middleware('auth:admin')` directly.
-     */
+
     public function handle(Request $request, Closure $next, string $role): Response
     {
         // For the 'admin' role, check the dedicated admin guard.

@@ -7,16 +7,7 @@ use Illuminate\Support\Facades\{DB, Notification, Mail};
 use App\Notifications\FailedJobsDigest;
 use App\Mail\FailedJobsDigestMail;
 
-/**
- * Exercise 46.5 — Scheduled daily digest of failed jobs.
- *
- * Scheduled in routes/console.php to run daily at 08:00.
- * Collects failed jobs from the last 24 hours and sends a summary to Slack.
- *
- * Usage:
- *   php artisan jobs:failed-digest          (sends to configured channel)
- *   php artisan jobs:failed-digest --preview (sends to #bot-testing instead)
- */
+
 class SendFailedJobsDigest extends Command
 {
     protected $signature = 'jobs:failed-digest {--preview : Send to #bot-testing instead of #ops-alerts}';
@@ -49,9 +40,9 @@ class SendFailedJobsDigest extends Command
         }
 
         $digestData = [
-            'total'      => $total,
-            'by_class'   => $byJobClass->toArray(),
-            'since'      => $since->toDateTimeString(),
+            'total' => $total,
+            'by_class' => $byJobClass->toArray(),
+            'since' => $since->toDateTimeString(),
             'retry_hint' => 'php artisan queue:retry all',
         ];
 

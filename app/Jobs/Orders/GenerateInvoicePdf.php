@@ -11,11 +11,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 
-/**
- * Step 3 of the post-checkout chain.
- * Generates a PDF invoice and stores it in the public disk.
- * Reuses the existing OrderService::generateInvoiceAndReturnPath logic.
- */
+
 class GenerateInvoicePdf implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
@@ -23,7 +19,9 @@ class GenerateInvoicePdf implements ShouldQueue
     public int $tries = 3;
     public int $timeout = 60;
 
-    public function __construct(public readonly Order $order) {}
+    public function __construct(public readonly Order $order)
+    {
+    }
 
     public function handle(OrderService $service): void
     {
@@ -55,17 +53,15 @@ class GenerateInvoicePdf implements ShouldQueue
                 'slack',
                 config('services.slack.channels.bot_testing', '#bot-testing')
             )->notify(new \App\Notifications\FailedJobAlert([
-                'job'       => self::class,
-                'queue'     => $this->queue ?? 'default',
-                'error'     => "Invoice generation failed for Order #{$this->order->order_number}: {$e->getMessage()}",
-                'failed_at' => now()->toDateTimeString(),
-            ]));
+                            'job' => self::class,
+                            'queue' => $this->queue ?? 'default',
+                            'error' => "Invoice generation failed for Order #{$this->order->order_number}: {$e->getMessage()}",
+                            'failed_at' => now()->toDateTimeString(),
+                        ]));
         } catch (\Throwable $notifyEx) {
             Log::error("GenerateInvoicePdf: Slack alert failed — {$notifyEx->getMessage()}");
         }
 
-        // Note: we do NOT mark the order as failed here — payment and stock
-        // reservation already succeeded. Admin can regenerate via:
-        //   php artisan queue:retry {uuid}
+
     }
 }

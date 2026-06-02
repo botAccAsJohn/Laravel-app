@@ -1,5 +1,4 @@
 <?php
-// app/Http/Controllers/Api/TokenController.php
 
 namespace App\Http\Controllers\Api;
 
