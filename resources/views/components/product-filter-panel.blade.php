@@ -41,6 +41,10 @@
         </div>
 
         <form method="GET" action="{{ route('products.index') }}" class="space-y-8 px-8 py-8">
+            @if(request()->has('q'))
+                <input type="hidden" name="q" value="{{ request()->query('q') }}">
+            @endif
+
             {{-- Category Filter (Checkboxes) --}}
             <div class="space-y-4">
                 <div class="flex items-center gap-2 text-slate-800">
@@ -170,7 +174,7 @@
                 </button>
 
                 <a
-                    href="{{ route('products.index') }}"
+                    href="{{ request()->has('q') ? route('products.index', ['q' => request()->query('q')]) : route('products.index') }}"
                     class="h-12 w-full flex items-center justify-center rounded-xl border-2 border-slate-100 bg-white text-sm font-bold text-slate-500 transition-all hover:border-rose-100 hover:bg-rose-50 hover:text-rose-500 active:scale-95"
                 >
                     {{ __('products.reset_params') }}

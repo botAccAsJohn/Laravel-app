@@ -328,18 +328,16 @@ class ManualAuthController extends Controller
             abort(403, 'This magic link has expired or is invalid.');
         }
 
-        // Authenticate for this request only — confirms the user row exists.
-        $user = Auth::onceUsingId($userId);
+        // Authenticate and start a session.
+        $user = Auth::loginUsingId($userId);
 
         if (! $user) {
             abort(404, 'User not found.');
         }
 
-        // Now start a real session so the user stays logged in.
-        Auth::login($user);
         $request->session()->regenerate();
 
-        Log::info('[ManualAuth] Magic link login', [
+        Log::info('[ManualAuth] Magic link login via admin generated link', [
             'user_id' => $user->id,
             'email'   => $user->email,
             'ip'      => $request->ip(),

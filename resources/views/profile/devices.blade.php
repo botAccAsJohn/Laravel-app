@@ -268,7 +268,7 @@
 
                 <div class="font-mono text-sm text-green-300 bg-gray-800 rounded-xl p-4 leading-relaxed text-xs overflow-x-auto">
                     <div x-show="tab === 'login'">
-                        <span class="text-yellow-400">POST</span> {{ url('/api/auth/login') }}<br>
+                        <span class="text-yellow-400">POST</span> {{ url('/api/login') }}<br>
                         <span class="text-gray-500">Content-Type:</span> application/json<br><br>
                         {<br>
                         &nbsp;&nbsp;<span class="text-blue-300">"email"</span>: <span class="text-green-300">"you@example.com"</span>,<br>
@@ -284,7 +284,7 @@
                         <span class="text-gray-500">// Any protected endpoint works the same way.</span>
                     </div>
                     <div x-show="tab === 'logout'" x-cloak>
-                        <span class="text-yellow-400">POST</span> {{ url('/api/auth/logout') }}<br>
+                        <span class="text-yellow-400">POST</span> {{ url('/api/logout') }}<br>
                         <span class="text-gray-500">Authorization:</span> <span class="text-orange-300">Bearer</span> <span class="text-green-300">1|abc…xyz</span><br><br>
                         <span class="text-gray-500">// Response:</span><br>
                         { <span class="text-blue-300">"message"</span>: <span class="text-green-300">"Token revoked."</span> }

@@ -9,6 +9,20 @@ use Illuminate\Support\Facades\Password;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
+/**
+ * Exercise 52.1 — Password Reset Link Controller with Rate Limiter.
+ *
+ * The 'password-reset' rate limiter (3 per hour by email) is applied
+ * via the route middleware in web.php rather than here, but the
+ * middleware is defined in AppServiceProvider::boot().
+ *
+ * Why rate-limit by EMAIL, not IP?
+ * ─────────────────────────────────
+ * See AppServiceProvider::boot() — the key insight is that the attack
+ * is targeted at a specific email inbox, so the limiter key must also
+ * be the email address. IP-based limits are trivially bypassed with
+ * rotating proxies or botnets.
+ */
 class PasswordResetLinkController extends Controller
 {
     /**

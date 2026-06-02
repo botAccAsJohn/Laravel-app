@@ -24,7 +24,7 @@ class OrderFactory extends Factory
         return [
             'order_number' => 'ORD-' . now()->format('ymdHis') . '-' . strtoupper(Str::random(6)),
             'user_id' => User::factory(),
-            'status' => 'pending',
+            'status' => 'confirmed',
             'payment_method' => 'card',
             'address' => $this->faker->address,
             'phone' => $this->faker->phoneNumber,
@@ -37,21 +37,21 @@ class OrderFactory extends Factory
 
     public function pending(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state(fn(array $attributes) => [
             'status' => 'pending',
         ]);
     }
 
     public function completed(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state(fn(array $attributes) => [
             'status' => 'completed',
         ]);
     }
 
     public function cancelled(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state(fn(array $attributes) => [
             'status' => 'cancelled',
         ]);
     }

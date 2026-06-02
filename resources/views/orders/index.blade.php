@@ -11,19 +11,16 @@
             </div>
 
             <div class="flex items-center gap-3">
-                                            @if(Auth::guard('admin')->check())
-                <a href="{{ route('orders.analytics') }}"
-                    class="inline-flex items-center justify-center bg-white text-indigo-700 border border-indigo-100 px-4 py-2 rounded-lg hover:bg-indigo-50 transition font-bold shadow-sm">
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                    </svg>
-                    View Order Insights
-                </a>
+                @if(Auth::guard('admin')->check())
+                    <a href="{{ route('orders.analytics') }}"
+                        class="inline-flex items-center justify-center bg-white text-indigo-700 border border-indigo-100 px-4 py-2 rounded-lg hover:bg-indigo-50 transition font-bold shadow-sm">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                        View Order Insights
+                    </a>
                 @endif
-                <a href="{{ route('orders.create') }}"
-                    class="inline-flex items-center justify-center bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition font-bold shadow-sm">
-                    Create New Order
-                </a>
             </div>
         </div>
 
@@ -54,10 +51,10 @@
                                     Payment</th>
                                 <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                                     Amount</th>
-                                                            @if(Auth::guard('admin')->check())
-                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
-                                    title="Most recent order total for this customer (correlated subquery)">
-                                    Last Order ↓</th>
+                                @if(Auth::guard('admin')->check())
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
+                                        title="Most recent order total for this customer (correlated subquery)">
+                                        Last Order ↓</th>
                                 @endif
                                 <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                                     Placed At</th>
@@ -102,20 +99,20 @@
                                             @endif
                                         </div>
                                     </td>
-                                                                @if(Auth::guard('admin')->check())
-                                    <td class="px-6 py-4 align-top">
-                                        {{-- last_order_amount is a virtual column injected by addSelect() + correlated
-                                             subquery in OrderService::getCustomerList(). It is NULL when the order
-                                             was loaded via getOrdersForUser() — guard with ?:. --}}
-                                        @if(isset($order->last_order_amount))
-                                            <div class="text-sm font-semibold text-indigo-700">
-                                                @currency($order->last_order_amount)
-                                            </div>
-                                            <div class="text-[10px] text-gray-400 uppercase tracking-widest">last order</div>
-                                        @else
-                                            <span class="text-xs text-gray-300">&mdash;</span>
-                                        @endif
-                                    </td>
+                                    @if(Auth::guard('admin')->check())
+                                        <td class="px-6 py-4 align-top">
+                                            {{-- last_order_amount is a virtual column injected by addSelect() + correlated
+                                            subquery in OrderService::getCustomerList(). It is NULL when the order
+                                            was loaded via getOrdersForUser() — guard with ?:. --}}
+                                            @if(isset($order->last_order_amount))
+                                                <div class="text-sm font-semibold text-indigo-700">
+                                                    @currency($order->last_order_amount)
+                                                </div>
+                                                <div class="text-[10px] text-gray-400 uppercase tracking-widest">last order</div>
+                                            @else
+                                                <span class="text-xs text-gray-300">&mdash;</span>
+                                            @endif
+                                        </td>
                                     @endif
                                     <td class="px-6 py-4 align-top text-sm text-gray-600">
                                         {{ optional($order->placed_at)->format('d M Y, h:i A') ?? 'Not placed yet' }}
@@ -127,13 +124,14 @@
                                                 View
                                             </a>
 
-                                                                        @if(Auth::guard('admin')->check())
+                                            @if(Auth::guard('admin')->check())
                                                 <a href="{{ route('orders.edit', $order) }}"
                                                     class="bg-yellow-500 text-white px-3 py-1.5 rounded-lg hover:bg-yellow-600 transition whitespace-nowrap">
                                                     Edit
                                                 </a>
                                                 <form action="{{ route('orders.destroy', $order) }}" method="POST"
-                                                    onsubmit="return confirm('Are you sure you want to delete this order?');" class="inline">
+                                                    onsubmit="return confirm('Are you sure you want to delete this order?');"
+                                                    class="inline">
                                                     @csrf
                                                     @method('DELETE')
                                                     <button type="submit"
@@ -145,7 +143,8 @@
 
                                             @if(Auth::id() === $order->user_id && in_array($status, ['pending', 'confirmed']))
                                                 <form action="{{ route('orders.cancel', $order) }}" method="POST"
-                                                    onsubmit="return confirm('Do you really want to cancel this order? This action cannot be undone.');" class="inline">
+                                                    onsubmit="return confirm('Do you really want to cancel this order? This action cannot be undone.');"
+                                                    class="inline">
                                                     @csrf
                                                     <button type="submit"
                                                         class="border border-red-500 text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-50 transition whitespace-nowrap font-medium">

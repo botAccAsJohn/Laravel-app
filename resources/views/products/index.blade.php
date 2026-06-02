@@ -9,36 +9,67 @@
     <div class="max-w-[1600px] mx-auto px-6 py-12 lg:py-16">
 
         {{-- Enhanced Header --}}
-        <div class="mb-12 flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
-            <div class="flex items-center gap-6">
-                <div class="hidden sm:block h-16 w-2 rounded-full bg-indigo-600 shadow-[0_0_20px_rgba(79,70,229,0.4)]"></div>
-                <div>
-                    <h1 class="text-4xl md:text-5xl font-black text-slate-900 tracking-tight mb-2">
-                        {{ $is_search ? __('products.search_findings') : __('products.title') }}
-                    </h1>
-                    <p class="text-slate-500 font-medium flex items-center gap-2">
-                        <span class="inline-flex h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
-                        @if($is_search)
-                        {{ trans_choice('common.products_found', $total_products, ['count' => number_format($total_products)]) }}
-                        @else
-                        {{ trans_choice('common.products_found', $all_products_count, ['count' => number_format($all_products_count)]) }}
-                        @endif
-                    </p>
+        <div class="mb-12 flex flex-col gap-8">
+            <div class="flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
+                <div class="flex items-center gap-6">
+                    <div class="hidden sm:block h-16 w-2 rounded-full bg-indigo-600 shadow-[0_0_20px_rgba(79,70,229,0.4)]"></div>
+                    <div>
+                        <h1 class="text-4xl md:text-5xl font-black text-slate-900 tracking-tight mb-2">
+                            {{ $is_search ? __('products.search_findings') : __('products.title') }}
+                        </h1>
+                        <p class="text-slate-500 font-medium flex items-center gap-2">
+                            <span class="inline-flex h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
+                            @if($is_search)
+                            {{ trans_choice('common.products_found', $total_products, ['count' => number_format($total_products)]) }}
+                            @else
+                            {{ trans_choice('common.products_found', $all_products_count, ['count' => number_format($all_products_count)]) }}
+                            @endif
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    @auth
+                    @if(Auth::guard('admin')->check())
+                    <a href="{{ route('products.create') }}"
+                        class="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-2xl bg-slate-900 px-8 py-4 text-sm font-bold text-white transition-all hover:bg-slate-800 hover:shadow-2xl hover:shadow-slate-200 active:scale-95">
+                        <span class="relative z-10 transition-transform group-hover:-translate-x-1">{{ __('products.add_product') }}</span>
+                        <svg class="relative z-10 w-4 h-4 transition-transform group-hover:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
+                        </svg>
+                    </a>
+                    @endif
+                    @endauth
                 </div>
             </div>
 
-            <div class="flex items-center gap-3">
-                @auth
-                @if(Auth::guard('admin')->check())
-                <a href="{{ route('products.create') }}"
-                    class="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-2xl bg-slate-900 px-8 py-4 text-sm font-bold text-white transition-all hover:bg-slate-800 hover:shadow-2xl hover:shadow-slate-200 active:scale-95">
-                    <span class="relative z-10 transition-transform group-hover:-translate-x-1">{{ __('products.add_product') }}</span>
-                    <svg class="relative z-10 w-4 h-4 transition-transform group-hover:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
-                    </svg>
-                </a>
-                @endif
-                @endauth
+            {{-- Search Bar --}}
+            <div class="w-full">
+                <form method="GET" action="{{ route('products.index') }}" class="group relative">
+                    <div class="relative flex items-center">
+                        <input
+                            type="text"
+                            name="q"
+                            placeholder="Search products by name, description, or category..."
+                            value="{{ $search_query ?? '' }}"
+                            class="w-full px-6 py-4 pr-14 rounded-2xl border-2 border-slate-200 bg-white text-slate-900 placeholder-slate-400 font-medium transition-all focus:outline-none focus:border-indigo-600 focus:shadow-lg focus:shadow-indigo-100 focus:bg-slate-50">
+                        <button
+                            type="submit"
+                            class="absolute right-4 inline-flex items-center justify-center h-8 w-8 rounded-lg text-slate-400 hover:text-indigo-600 transition-colors">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                        </button>
+                    </div>
+                    @if($is_search)
+                    <a href="{{ route('products.index') }}" class="mt-3 inline-flex items-center text-sm text-indigo-600 font-semibold hover:text-indigo-700 transition-colors gap-1">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                        Clear search
+                    </a>
+                    @endif
+                </form>
             </div>
         </div>
 

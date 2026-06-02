@@ -1,129 +1,108 @@
 <?php
 // app/Policies/OrderPolicy.php
 //
-// Exercise 50.2 — Policy for the Order model.
+// Policy for the Order model.
 //
-// Key business rule:
-//   • Customers can view and cancel ONLY their own orders.
-//   • Admins (admin guard) can view, update, and delete any order.
-//   • Creating an order is a customer action (from cart checkout).
+// This project uses TWO authentication guards:
+//   • web   → App\Models\User  (customers)
+//   • admin → App\Models\Admin (administrators)
 //
-// This replaces the private authorizeAccess() helper in OrderController
-// with a proper named policy that can be re-used in API controllers and
-// referenced in Blade with @can('view', $order).
+// Laravel's Gate resolves $user from the CURRENTLY AUTHENTICATED model across
+// all guards. When an Admin is logged in, the Gate passes the Admin instance —
+// so every method must accept User|Admin|null (the same union used throughout
+// AuthServiceProvider). Using ?User alone causes a TypeError when Admin is given.
+//
+// Admin checks are performed via Auth::guard('admin')->check() in isAdmin(),
+// not by inspecting the $user argument (which may be an Admin or null).
+//
+// Who can do what:
+//   viewAny  → authenticated customers (own orders); admins via before()
+//   view     → customers see only their own order; admins via before()
+//   update   → admins only (via before())
+//   delete   → admins only (via before())
+//   cancel   → customers (own order) OR admins (via before())
 
 namespace App\Policies;
 
-use App\Models\{Order, User};
-use Illuminate\Auth\Access\{HandlesAuthorization, Response};
+use App\Models\Admin;
+use App\Models\Order;
+use App\Models\User;
+use Illuminate\Auth\Access\HandlesAuthorization;
 use Illuminate\Support\Facades\Auth;
 
 class OrderPolicy
 {
     use HandlesAuthorization;
 
+    // ── Helper — is the current admin-guard user authenticated? ──────────────
+    // We check the guard explicitly rather than relying on the $user argument
+    // because $user may be a User, Admin, or null depending on which guard
+    // is active. Auth::guard('admin')->check() is always unambiguous.
     private function isAdmin(): bool
     {
         return Auth::guard('admin')->check();
     }
 
-    // ── Exercise 50.3: Policy before() ───────────────────────────────────────
-    // Admins get unrestricted access to all order operations without evaluating
-    // any individual policy method. Returning null falls through to the method.
-    public function before(User $user, string $ability): ?bool
+    // ── before() — admin bypass ───────────────────────────────────────────────
+    //
+    // Runs ahead of every policy method. Returning non-null short-circuits the
+    // specific method. Returning null falls through.
+    //
+    // IMPORTANT: must accept User|Admin|null — when the admin guard is active
+    // Laravel passes an Admin instance, not a User. Typing as ?User causes a
+    // TypeError ("Admin given").
+    public function before(User|Admin|null $user, string $ability): ?bool
     {
         if ($this->isAdmin()) {
-            return true;
+            return true; // admins may do anything with orders
         }
 
-        return null;
+        return null; // fall through to the specific method
     }
 
     /**
-     * Admins see all orders; customers see only their own list.
-     * The controller still adds the where('user_id') scope —
-     * this gate governs access to the index endpoint itself.
+     * Can the user see the orders listing?
+     * Admins: handled by before(). Customers: yes if authenticated.
+     * (The controller/service scopes the query to their own orders.)
      */
-    public function viewAny(User $user): bool
+    public function viewAny(User|Admin|null $user): bool
     {
-        return true; // all authenticated users may hit the index
+        return $user instanceof User;
     }
 
     /**
-     * Admins can view any order.
-     * Customers can view only their own.
-     *
-     * Returns 404 (not 403) for unauthorized access to prevent order-ID
-     * enumeration — an attacker cannot tell whether order #1234 exists
-     * or simply belongs to someone else.
+     * Can the user view a specific order?
+     * Admins: handled by before(). Customers: only their own order.
      */
-    public function view(User $user, Order $order): Response|bool
+    public function view(User|Admin|null $user, Order $order): bool
     {
-        if ($this->isAdmin()) {
-            return Response::allow();
-        }
-
-        if ($order->user_id === $user->id) {
-            return Response::allow();
-        }
-
-        // The order exists but belongs to another customer — return 404.
-        return Response::denyAsNotFound('Order not found.');
+        return $user instanceof User && $user->id === $order->user_id;
     }
 
     /**
-     * Creating orders is a customer action (from the checkout flow).
+     * Can the user update an order (e.g. change status)?
+     * Admins only — granted entirely by before(). Customers: never.
      */
-    public function create(User $user): bool
+    public function update(User|Admin|null $user, Order $order): bool
     {
-        return ! $this->isAdmin(); // customers only
+        return false;
     }
 
     /**
-     * Only admins may edit order status, addresses, etc.
+     * Can the user delete an order?
+     * Admins only — granted entirely by before(). Customers: never.
      */
-    public function update(User $user, Order $order): bool
+    public function delete(User|Admin|null $user, Order $order): bool
     {
-        return $this->isAdmin();
+        return false;
     }
 
     /**
-     * Customers can cancel their own orders if status allows it.
-     * Admins can cancel any order.
-     *
-     * Note: the status check (pending/confirmed) is enforced in the
-     * controller, not here — policy answers "who", controller answers "when".
+     * Can the user cancel an order?
+     * Admins: handled by before(). Customers: only their own order.
      */
-    public function cancel(User $user, Order $order): bool
+    public function cancel(User|Admin|null $user, Order $order): bool
     {
-        if ($this->isAdmin()) {
-            return true;
-        }
-
-        return $order->user_id === $user->id;
-    }
-
-    /**
-     * Only admins may hard-delete orders.
-     */
-    public function delete(User $user, Order $order): bool
-    {
-        return $this->isAdmin();
-    }
-
-    /**
-     * Restore soft-deleted orders. Admins only.
-     */
-    public function restore(User $user, Order $order): bool
-    {
-        return $this->isAdmin();
-    }
-
-    /**
-     * Permanently purge an order. Admins only.
-     */
-    public function forceDelete(User $user, Order $order): bool
-    {
-        return $this->isAdmin();
+        return $user instanceof User && $user->id === $order->user_id;
     }
 }

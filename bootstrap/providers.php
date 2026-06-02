@@ -7,4 +7,5 @@ return [
     App\Providers\EventServiceProvider::class,
     App\Providers\ObserverServiceProvider::class,
     Resend\Laravel\ResendServiceProvider::class,
+    App\Providers\SecretsVaultServiceProvider::class, // Exercise 54.4
 ];

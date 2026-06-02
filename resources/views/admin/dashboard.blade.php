@@ -23,7 +23,7 @@
             </a>
 
             {{-- Export Products Link --}}
-            <a href="{{ route('products.export') }}" class="flex items-center gap-2 group px-4 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl font-bold text-xs transition-all border border-blue-100 shadow-sm">
+            <a href="{{ route('admin.products.export') }}" class="flex items-center gap-2 group px-4 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl font-bold text-xs transition-all border border-blue-100 shadow-sm">
                 <svg class="w-4 h-4 text-blue-500 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                 </svg>

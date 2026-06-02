@@ -95,3 +95,5 @@
 
 Exe Remainig : Exercise 46.3 - Job Batching
 Exe Remainig : Exercise 46
+
+impersonation related issue are not solved !!!

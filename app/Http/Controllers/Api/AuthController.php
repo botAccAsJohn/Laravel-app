@@ -14,14 +14,14 @@ class AuthController extends Controller
     public function register(Request $request)
     {
         $data = $request->validate([
-            'name'     => 'required|string|max:255',
-            'email'    => 'required|email|unique:users',
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users',
             'password' => 'required|min:8|confirmed',
         ]);
 
-        $user  = User::create([
-            'name'     => $data['name'],
-            'email'    => $data['email'],
+        $user = User::create([
+            'name' => $data['name'],
+            'email' => $data['email'],
             'password' => bcrypt($data['password']),
         ]);
 
@@ -29,14 +29,15 @@ class AuthController extends Controller
             $request->device_name ?? 'api'
         )->plainTextToken;
 
-        return response()->json(['token' => $token, 'user' => $user], 201);
+        return response()->json(['token' => $token], 201);
     }
 
     public function login(Request $request)
     {
+
         $request->validate([
-            'email'       => 'required|email',
-            'password'    => 'required',
+            'email' => 'required|email',
+            'password' => 'required',
             'device_name' => 'sometimes|string|max:255',
         ]);
 
@@ -46,7 +47,7 @@ class AuthController extends Controller
             ]);
         }
 
-        $user  = Auth::user();
+        $user = Auth::user();
         $token = $user->createToken(
             $request->device_name ?? 'api-token'
         )->plainTextToken;

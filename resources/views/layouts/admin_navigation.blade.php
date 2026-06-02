@@ -49,7 +49,7 @@
                     @endcan
 
                     @can('view-logs')
-                    <x-nav-link :href="route('logs.index')" :active="request()->routeIs('logs.*')">
+                    <x-nav-link :href="route('admin.logs.index')" :active="request()->routeIs('admin.logs.*')">
                         {{ __('common.logs') }}
                     </x-nav-link>
                     @endcan
@@ -159,7 +159,7 @@
             <x-responsive-nav-link :href="route('orders.index')" :active="request()->routeIs('orders.index')">
                 {{ __('common.orders') }}
             </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('logs.index')" :active="request()->routeIs('logs.index')">
+            <x-responsive-nav-link :href="route('admin.logs.index')" :active="request()->routeIs('admin.logs.index')">
                 {{ __('common.logs') }}
             </x-responsive-nav-link>
         </div>

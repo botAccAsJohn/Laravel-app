@@ -8,22 +8,26 @@ use Illuminate\Http\{RedirectResponse, Request};
 use App\Http\Requests\{StoreOrderRequest, UpdateOrderRequest};
 use Illuminate\Support\Facades\{Auth, Storage};
 use Illuminate\View\View;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class OrderController extends Controller
 {
+    use AuthorizesRequests;
+
     public function __construct(
         private OrderService $service,
-    ) {}
+    ) {
+    }
 
     public function index(Request $request): View
     {
-        $cursor  = $request->query('cursor', '');
+        $cursor = $request->query('cursor', '');
         $isAdmin = Auth::guard('admin')->check();
-        $user    = $isAdmin ? Auth::guard('admin')->user() : Auth::user();
-        $data    = $this->service->getOrdersForUser($user, $cursor, $isAdmin);
+        $user = $isAdmin ? Auth::guard('admin')->user() : Auth::user();
+        $data = $this->service->getOrdersForUser($user, $cursor, $isAdmin);
 
         return view('orders.index', [
-            'orders'       => $data['orders'],
+            'orders' => $data['orders'],
             'total_orders' => $data['total_orders'],
         ]);
     }
@@ -35,10 +39,10 @@ class OrderController extends Controller
     public function analytics(): View
     {
         $user = Auth::user();
-        
+
         // Admins (admin guard) see all orders; customers see only their own.
         $query = Order::with('items.product');
-        if (! Auth::guard('admin')->check()) {
+        if (!Auth::guard('admin')->check()) {
             $query->where('user_id', $user->id);
         }
         $orders = $query->get();
@@ -172,7 +176,7 @@ class OrderController extends Controller
 
         $this->authorize('view', $order);
 
-        $path = 'invoices/invoice-' . ($order->order_number ?? $order->id) . '.pdf';
+        $path = 'invoices/invoice-' . $order->order_number . '.pdf';
 
         if (!Storage::disk('public')->exists($path)) {
             return redirect()->back()->with('error', 'Invoice file not found.');

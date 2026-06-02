@@ -101,8 +101,14 @@ return [
     'passwords' => [
         'users' => [
             'provider' => 'users',
-            'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
-            'expire' => 60,
+            'table'    => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
+            // Exercise 52.1: Reduced from default 60 → 15 minutes.
+            // Trade-off: shorter windows limit exposure if a reset link is
+            // intercepted (e.g. via email forwarding or open Wi-Fi sniffing),
+            // but they frustrate users on slow email delivery. 15 min balances
+            // security with a reasonable delivery window.
+            'expire'   => 15,
+            // Users must wait 60 s before requesting another token.
             'throttle' => 60,
         ],
     ],

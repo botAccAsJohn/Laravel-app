@@ -10,7 +10,7 @@ use Illuminate\Support\Str;
 
 class ProductService
 {
- 
+
 
     // public function dosomething($request)
     // {
@@ -64,11 +64,11 @@ class ProductService
     {
         $filters = [
             'categories' => (array) $request->input('categories', []),
-            'min_price'  => $request->filled('min_price') ? (float) $request->input('min_price') : null,
-            'max_price'  => $request->filled('max_price') ? (float) $request->input('max_price') : null,
-            'in_stock'   => $request->boolean('in_stock'),
-            'on_sale'    => $request->boolean('on_sale'),
-            'sort'       => $request->input('sort', 'newest'),
+            'min_price' => $request->filled('min_price') ? (float) $request->input('min_price') : null,
+            'max_price' => $request->filled('max_price') ? (float) $request->input('max_price') : null,
+            'in_stock' => $request->boolean('in_stock'),
+            'on_sale' => $request->boolean('on_sale'),
+            'sort' => $request->input('sort', 'newest'),
         ];
 
         // Swap price bounds if inverted
@@ -78,20 +78,31 @@ class ProductService
 
         ksort($filters);
 
-        // Cursor pagination uses a cursor string instead of a page number
+        // ── Cursor Pagination ─────────────────────────────────────────────────
+        // Cursor pagination encodes the position of the last seen row as an
+        // opaque base64 token (?cursor=eyJpZCI6...}) instead of a page offset.
+        // This makes deep-page queries O(1) — the DB seeks directly to the
+        // cursor row rather than scanning all preceding rows.
+        //
+        // Constraints (respected throughout this method):
+        //   • ORDER BY must use only real table columns (no FIELD(), no raw expr).
+        //   • The final sort column MUST be unique (we use 'id' as tiebreaker).
+        //   • No random jumps to page N — only prev/next navigation.
+        //
+        // Filter & search logic is completely unchanged.
         $cursor = $request->query('cursor', '');
 
         $key      = md5(json_encode(['filters' => $filters, 'cursor' => $cursor]));
         $cacheKey = 'product:' . $key;
 
-        return Cache::tags('productsPage')->remember($cacheKey, 60 * 60 * 24, function () use ($filters, $cursor) {
+        return Cache::tags('productsPage')->remember($cacheKey, 60 * 60 * 24, function () use ($filters, $request) {
 
             // ── 1. Build the query entirely at the DB layer ────────────────────
             // buildProductQuery() already calls select() — never SELECT *.
             $query = $this->buildProductQuery($filters);
 
-            // Deterministic sorting — always add 'id' as a tiebreaker so cursor
-            // pagination doesn't break on rows with equal primary sort values.
+            // Deterministic sorting — always add 'id' as a tiebreaker so
+            // the cursor can uniquely identify each row.
             match ($filters['sort']) {
                 'price_low_high' => $query->orderBy('products.price', 'asc')->orderBy('products.id', 'asc'),
                 'price_high_low' => $query->orderBy('products.price', 'desc')->orderBy('products.id', 'desc'),
@@ -100,10 +111,6 @@ class ProductService
             };
 
             // ── 2. Columns the Eloquent layer will hydrate ─────────────────────
-            // Mirrors the select() list in buildProductQuery() so that Eloquent
-            // also avoids loading columns the view never touches (e.g. created_by,
-            // updated_by, full-text index columns, etc.).
-            // 'id' must always be first so cursorPaginate can encode the cursor.
             $listingColumns = [
                 'id',
                 'slug',
@@ -119,7 +126,7 @@ class ProductService
                 'tags',
                 'category_id',     // needed by the eager-loaded category relation
                 'deleted_at',      // required for SoftDeletes trait to function
-                'created_at',      // needed for cursor encoding on date sorts
+                'created_at',      // needed for cursor sort on date sorts
             ];
 
             // Retrieve the qualifying product IDs from the Query Builder result,
@@ -131,19 +138,9 @@ class ProductService
                 ->whereIn('id', $ids)
                 ->whereNull('deleted_at');
 
-            // ── 3. Conditional addSelect() — discount_price on sale pages ──────
-            // When the "on_sale" filter is active the discount_price is *already*
-            // in $listingColumns above (we always want it for the sale badge).
-            // This block demonstrates addSelect() for cases where a column should
-            // only be fetched on certain filter combinations — e.g. a heavy
-            // computed column that is only rendered on dedicated sale pages.
-            // Uncomment and adapt for columns not in the base list:
-            //
-            // if ($filters['on_sale']) {
-            //     $eloquentQuery->addSelect('some_heavy_sale_column');
-            // }
-
-            // Re-apply the same deterministic sort on the Eloquent query
+            // Re-apply the same deterministic sort on the Eloquent query.
+            // cursorPaginate() reads these ORDER BY columns to build/decode
+            // the cursor token automatically.
             match ($filters['sort']) {
                 'price_low_high' => $eloquentQuery->orderBy('price', 'asc')->orderBy('id', 'asc'),
                 'price_high_low' => $eloquentQuery->orderBy('price', 'desc')->orderBy('id', 'desc'),
@@ -151,12 +148,15 @@ class ProductService
                 default          => $eloquentQuery->orderBy('created_at', 'desc')->orderBy('id', 'desc'),
             };
 
-            // ── 4. SQL comparison log (non-production only) ────────────────────
+            // ── 3. SQL comparison log (non-production only) ────────────────────
             $this->toSqlDebug($query, $eloquentQuery);
 
-            // Pass the explicit column list to cursorPaginate so it selects the
-            // same columns even if called without a prior ->select() on the model.
-            $paginated = $eloquentQuery->cursorPaginate(12, $listingColumns, 'cursor', $cursor ?: null);
+            // ── 4. Cursor paginate ─────────────────────────────────────────────
+            // cursorPaginate() replaces paginate() with zero changes to filters,
+            // sorting, or the data shape returned to the view. The blade's
+            // ->withQueryString()->links() call works identically — Laravel
+            // renders prev/next links using the cursor token automatically.
+            $paginated = $eloquentQuery->cursorPaginate(12);
 
             // Derive the displayed price-range from the active filter values
             $priceRange = [
@@ -168,6 +168,135 @@ class ProductService
                 'products'   => $paginated,
                 'filters'    => $filters,
                 'priceRange' => $priceRange,
+            ];
+        });
+    }
+
+    public function searchProducts(\Illuminate\Http\Request $request, string $query)
+    {
+        $filters = [
+            'categories' => (array) $request->input('categories', []),
+            'min_price' => $request->filled('min_price') ? (float) $request->input('min_price') : null,
+            'max_price' => $request->filled('max_price') ? (float) $request->input('max_price') : null,
+            'in_stock' => $request->boolean('in_stock'),
+            'on_sale' => $request->boolean('on_sale'),
+            'sort' => $request->input('sort', 'newest'),
+        ];
+
+        if ($filters['min_price'] !== null && $filters['max_price'] !== null && $filters['min_price'] > $filters['max_price']) {
+            [$filters['min_price'], $filters['max_price']] = [$filters['max_price'], $filters['min_price']];
+        }
+
+        ksort($filters);
+        $cursor = $request->query('cursor', '');
+
+        $key = md5(json_encode(['search' => $query, 'filters' => $filters, 'cursor' => $cursor]));
+        $cacheKey = 'product:search:' . $key;
+
+        return Cache::tags('productsPage')->remember($cacheKey, 60 * 60, function () use ($query, $request, $filters, $cursor) {
+            // Use Meilisearch to search products
+            $searchResults = Product::search($query)
+                ->when(!empty($filters['categories']), function ($q) use ($filters) {
+                    return $q->whereIn('category_id', $filters['categories']);
+                })
+                ->when($filters['in_stock'], function ($q) {
+                    return $q;
+                })
+                ->get();
+
+            // Get the IDs from search results
+            $ids = $searchResults->pluck('id')->toArray();
+
+            // If no results, return empty
+            if (empty($ids)) {
+                $paginated = new \Illuminate\Pagination\LengthAwarePaginator(
+                    collect([]),
+                    0,
+                    12,
+                    (int) $request->get('page', 1),
+                    ['path' => \Illuminate\Pagination\Paginator::resolveCurrentPath(), 'query' => $request->query()]
+                );
+
+                $priceRange = [
+                    'min' => $filters['min_price'] ?? 0,
+                    'max' => $filters['max_price'] ?? 0,
+                ];
+
+                return [
+                    'products' => $paginated,
+                    'filters' => $filters,
+                    'priceRange' => $priceRange,
+                    'total' => 0,
+                ];
+            }
+
+            // Build query to apply remaining filters (price, sale, stock)
+            $listingColumns = [
+                'id',
+                'slug',
+                'name',
+                'description',
+                'image_path',
+                'price',
+                'discount_price',
+                'is_active',
+                'quantity',
+                'average_rating',
+                'review_count',
+                'tags',
+                'category_id',
+                'deleted_at',
+                'created_at',
+            ];
+
+            $eloquentQuery = Product::with('category')
+                ->select($listingColumns)
+                ->whereIn('id', $ids)
+                ->whereNull('deleted_at')
+                ->when(
+                    $filters['min_price'] !== null && $filters['max_price'] !== null,
+                    fn($q) => $q->whereBetween('price', [$filters['min_price'], $filters['max_price']])
+                )
+                ->when(
+                    $filters['min_price'] !== null && $filters['max_price'] === null,
+                    fn($q) => $q->where('price', '>=', $filters['min_price'])
+                )
+                ->when(
+                    $filters['max_price'] !== null && $filters['min_price'] === null,
+                    fn($q) => $q->where('price', '<=', $filters['max_price'])
+                )
+                ->when(
+                    $filters['in_stock'],
+                    fn($q) => $q->where('quantity', '>', 0)
+                )
+                ->when(
+                    $filters['on_sale'],
+                    fn($q) => $q->where('discount_price', '>', 0)
+                );
+
+            // Apply sorting
+            match ($filters['sort']) {
+                'price_low_high' => $eloquentQuery->orderBy('price', 'asc')->orderBy('id', 'asc'),
+                'price_high_low' => $eloquentQuery->orderBy('price', 'desc')->orderBy('id', 'desc'),
+                'oldest' => $eloquentQuery->orderBy('created_at', 'asc')->orderBy('id', 'asc'),
+                default => $eloquentQuery->orderByRaw('FIELD(id, ' . implode(',', $ids) . ')'),
+            };
+
+            $page = (int) $request->get('page', 1);
+            $perPage = 12;
+
+            $paginated = $eloquentQuery->paginate($perPage, $listingColumns, 'page', $page);
+
+            $priceRange = [
+                'min' => $filters['min_price'] ?? 0,
+                'max' => $filters['max_price'] ?? 0,
+            ];
+
+            return [
+                'products' => $paginated,
+                'filters' => $filters,
+                'priceRange' => $priceRange,
+                'total' => $paginated->total(),
             ];
         });
     }
@@ -243,8 +372,9 @@ class ProductService
             // ── Category filter ────────────────────────────────────────────────────
             // when() replaces: if (!empty($filters['categories'])) { … }
             // whereIn() emits: WHERE category_id IN (1, 3, 7, …)
-            ->when(!empty($filters['categories']),
-                fn ($q) => $q->whereIn('category_id', $filters['categories'])
+            ->when(
+                !empty($filters['categories']),
+                fn($q) => $q->whereIn('category_id', $filters['categories'])
             )
 
             // ── Price-range filter ────────────────────────────────────────────────
@@ -254,22 +384,23 @@ class ProductService
             //   max only    → where <=
             ->when(
                 $filters['min_price'] !== null && $filters['max_price'] !== null,
-                fn ($q) => $q->whereBetween('price', [$filters['min_price'], $filters['max_price']])
+                fn($q) => $q->whereBetween('price', [$filters['min_price'], $filters['max_price']])
             )
             ->when(
                 $filters['min_price'] !== null && $filters['max_price'] === null,
-                fn ($q) => $q->where('price', '>=', $filters['min_price'])
+                fn($q) => $q->where('price', '>=', $filters['min_price'])
             )
             ->when(
                 $filters['max_price'] !== null && $filters['min_price'] === null,
-                fn ($q) => $q->where('price', '<=', $filters['max_price'])
+                fn($q) => $q->where('price', '<=', $filters['max_price'])
             )
 
             // ── Stock filter ──────────────────────────────────────────────────────
             // when() replaces: if ($filters['in_stock']) { … }
             // Emits: WHERE quantity > 0
-            ->when($filters['in_stock'],
-                fn ($q) => $q->where('quantity', '>', 0)
+            ->when(
+                $filters['in_stock'],
+                fn($q) => $q->where('quantity', '>', 0)
             )
 
             // ── On-sale filter via whereIn() with a subquery ───────────────────
@@ -289,8 +420,9 @@ class ProductService
             //   ))
             //
             // Simple form (equivalent for this single-table case):
-            ->when($filters['on_sale'],
-                fn ($q) => $q->where('discount_price', '>', 0)
+            ->when(
+                $filters['on_sale'],
+                fn($q) => $q->where('discount_price', '>', 0)
             );
 
         return $query;
@@ -320,7 +452,7 @@ class ProductService
      * @param  \Illuminate\Database\Eloquent\Builder                   $eloquentQuery
      */
     private function toSqlDebug(
-        \Illuminate\Database\Query\Builder    $qbQuery,
+        \Illuminate\Database\Query\Builder $qbQuery,
         \Illuminate\Database\Eloquent\Builder $eloquentQuery
     ): void {
         // Only run outside production — zero cost on live servers.
@@ -331,24 +463,24 @@ class ProductService
         // ── Query Builder SQL ─────────────────────────────────────────────────
         // toSql()       → raw SQL string with '?' for every binding
         // getBindings() → ordered array of values substituted for '?'
-        $qbSql      = $qbQuery->toSql();
+        $qbSql = $qbQuery->toSql();
         $qbBindings = $qbQuery->getBindings();
 
         // ── Eloquent Builder SQL ──────────────────────────────────────────────
         // Eloquent\Builder proxies toSql() / getBindings() to the underlying
         // Query\Builder, so the API is identical.
-        $elqSql      = $eloquentQuery->toSql();
+        $elqSql = $eloquentQuery->toSql();
         $elqBindings = $eloquentQuery->getBindings();
 
         Log::channel('db')->debug('[QB]  product listing query', [
-            'sql'      => $qbSql,
+            'sql' => $qbSql,
             'bindings' => $qbBindings,
             // Convenience: inline bindings so you can paste directly into a DB client
             'resolved' => vsprintf(str_replace('?', '%s', $qbSql), $qbBindings),
         ]);
 
         Log::channel('db')->debug('[ELQ] product listing query', [
-            'sql'      => $elqSql,
+            'sql' => $elqSql,
             'bindings' => $elqBindings,
             'resolved' => vsprintf(str_replace('?', '%s', $elqSql), $elqBindings),
         ]);
@@ -522,10 +654,10 @@ class ProductService
     }
 
     public function getLogs($name)
-    {   
-        if($name === 'SlowQuery') {
+    {
+        if ($name == 'slowquery') {
             $file = fopen(storage_path('logs/db/slow/' . $name . '-' . date('Y-m-d') . '.log'), 'r');
-        }else{
+        } else {
             $file = fopen(storage_path('logs/' . $name . '/' . $name . '-' . date('Y-m-d') . '.log'), 'r');
         }
         $logs = [];

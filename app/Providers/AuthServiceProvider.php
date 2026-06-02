@@ -44,7 +44,7 @@ class AuthServiceProvider extends ServiceProvider
     //   2. Web guard user whose `role` = 'super-admin' (future extensibility)
     private function registerGateBefore(): void
     {
-        Gate::before(function (?User $user, string $ability) {
+        Gate::before(function (User|Admin|null $user, string $ability) {
             // ── Pattern 1: admin-guard super-admin ──────────────────────────
             $adminUser = Auth::guard('admin')->user();
             if ($adminUser instanceof Admin) {
@@ -62,7 +62,7 @@ class AuthServiceProvider extends ServiceProvider
             }
 
             // ── Pattern 2: web guard super-admin (future) ───────────────────
-            if ($user && $user->role === 'super-admin') {
+            if ($user instanceof User && $user->role === 'super-admin') {
                 return true;
             }
 
@@ -79,49 +79,49 @@ class AuthServiceProvider extends ServiceProvider
     {
         // ── view-admin-dashboard ─────────────────────────────────────────────
         // Who: any authenticated admin (admin guard).
-        Gate::define('view-admin-dashboard', function (?User $user) {
+        Gate::define('view-admin-dashboard', function (User|Admin|null $user) {
             return Auth::guard('admin')->check();
         });
 
         // ── manage-products ──────────────────────────────────────────────────
         // Who: authenticated admins. Could be narrowed to specific admin roles.
-        Gate::define('manage-products', function (?User $user) {
+        Gate::define('manage-products', function (User|Admin|null $user) {
             return Auth::guard('admin')->check();
         });
 
         // ── manage-orders ────────────────────────────────────────────────────
         // Who: authenticated admins.
-        Gate::define('manage-orders', function (?User $user) {
+        Gate::define('manage-orders', function (User|Admin|null $user) {
             return Auth::guard('admin')->check();
         });
 
         // ── impersonate-users ────────────────────────────────────────────────
         // Who: authenticated admins only. Regular users must never impersonate.
-        Gate::define('impersonate-users', function (?User $user) {
+        Gate::define('impersonate-users', function (User|Admin|null $user) {
             return Auth::guard('admin')->check();
         });
 
         // ── view-analytics ───────────────────────────────────────────────────
         // Who: authenticated admins.
-        Gate::define('view-analytics', function (?User $user) {
+        Gate::define('view-analytics', function (User|Admin|null $user) {
             return Auth::guard('admin')->check();
         });
 
         // ── manage-reports ───────────────────────────────────────────────────
         // Who: authenticated admins.
-        Gate::define('manage-reports', function (?User $user) {
+        Gate::define('manage-reports', function (User|Admin|null $user) {
             return Auth::guard('admin')->check();
         });
 
         // ── view-logs ────────────────────────────────────────────────────────
         // Who: authenticated admins.
-        Gate::define('view-logs', function (?User $user) {
+        Gate::define('view-logs', function (User|Admin|null $user) {
             return Auth::guard('admin')->check();
         });
 
         // ── send-admin-alerts ────────────────────────────────────────────────
         // Who: authenticated admins.
-        Gate::define('send-admin-alerts', function (?User $user) {
+        Gate::define('send-admin-alerts', function (User|Admin|null $user) {
             return Auth::guard('admin')->check();
         });
 
@@ -166,7 +166,7 @@ class AuthServiceProvider extends ServiceProvider
     // Returning a value here overrides the result; returning null preserves it.
     private function registerGateAfter(): void
     {
-        Gate::after(function (?User $user, string $ability, ?bool $result, mixed $arguments) {
+        Gate::after(function (User|Admin|null $user, string $ability, ?bool $result, mixed $arguments) {
             // Only write to the audit log for non-trivial abilities to avoid
             // flooding the security log with view-* checks during page renders.
             $auditAbilities = [

@@ -24,7 +24,7 @@ class UserRoleController extends Controller
             ->orderBy('name')
             ->paginate(20);
 
-        $roles = Role::orderBy('display_name')->get();
+        $roles = Role::with('permissions')->orderBy('display_name')->get();
 
         return view('admin.users.index', compact('users', 'roles'));
     }
@@ -35,6 +35,8 @@ class UserRoleController extends Controller
     public function edit(User $user): View
     {
         Gate::authorize('manage_users');
+
+        $user->load('roles.permissions');
 
         $roles       = Role::with('permissions')->orderBy('display_name')->get();
         $userRoleIds = $user->roles->pluck('id')->toArray();
@@ -151,5 +153,28 @@ class UserRoleController extends Controller
         ]);
 
         return back()->with('success', "Role '{$role->display_name}' revoked from {$user->name}.");
+    }
+
+    /**
+     * Generate a signed magic-link URL for a given user.
+     */
+    public function generateMagicLink(Request $request, User $user): RedirectResponse
+    {
+        Gate::authorize('manage_users');
+
+        $url = \Illuminate\Support\Facades\URL::temporarySignedRoute(
+            'magic.login',
+            now()->addMinutes(15),
+            ['userId' => $user->id]
+        );
+
+        Log::channel('security')->info('[ManualAuth] Admin generated magic link', [
+            'admin_email' => Auth::guard('admin')->user()?->email,
+            'user_email'  => $user->email,
+            'user_id'     => $user->id,
+            'ip'          => $request->ip(),
+        ]);
+
+        return back()->with('magic_link', $url)->with('magic_link_user', $user->name);
     }
 }

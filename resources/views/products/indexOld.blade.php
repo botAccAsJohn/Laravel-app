@@ -12,10 +12,16 @@
         <div class="flex items-center gap-6">
             <div class="hidden sm:block h-16 w-2 rounded-full bg-indigo-600 shadow-[0_0_20px_rgba(79,70,229,0.4)]"></div>
             <div>
-                <h1 class="text-4xl md:text-5xl font-black text-slate-900 tracking-tight mb-2">Prime Objects</h1>
+                <h1 class="text-4xl md:text-5xl font-black text-slate-900 tracking-tight mb-2">
+                    {{ isset($is_search) && $is_search ? 'Search Results' : 'Prime Objects' }}
+                </h1>
                 <p class="text-slate-500 font-medium flex items-center gap-2">
                     <span class="inline-flex h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
-                    Curated collection of <span class="text-slate-900 font-bold underline decoration-indigo-500/30 decoration-4 underline-offset-4">{{ $all_products_count }}</span> items
+                    @if(isset($is_search) && $is_search)
+                        Found <span class="text-slate-900 font-bold underline decoration-indigo-500/30 decoration-4 underline-offset-4">{{ $total_products ?? 0 }}</span> matching items
+                    @else
+                        Curated collection of <span class="text-slate-900 font-bold underline decoration-indigo-500/30 decoration-4 underline-offset-4">{{ $all_products_count }}</span> items
+                    @endif
                 </p>
             </div>
         </div>
@@ -33,6 +39,44 @@
             @endif
             @endauth
         </div>
+    </div>
+
+    {{-- Search Bar --}}
+    <div class="mb-12 w-full">
+        <form method="GET" action="{{ route('products.index') }}" class="group relative">
+            @foreach(request()->except(['q', 'page']) as $key => $value)
+                @if(is_array($value))
+                    @foreach($value as $v)
+                        <input type="hidden" name="{{ $key }}[]" value="{{ $v }}">
+                    @endforeach
+                @else
+                    <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                @endif
+            @endforeach
+            <div class="relative flex items-center">
+                <input
+                    type="text"
+                    name="q"
+                    placeholder="Search products by name, description, or category..."
+                    value="{{ $search_query ?? '' }}"
+                    class="w-full px-6 py-4 pr-14 rounded-2xl border-2 border-slate-200 bg-white text-slate-900 placeholder-slate-400 font-medium transition-all focus:outline-none focus:border-indigo-600 focus:shadow-lg focus:shadow-indigo-100 focus:bg-slate-50">
+                <button
+                    type="submit"
+                    class="absolute right-4 inline-flex items-center justify-center h-8 w-8 rounded-lg text-slate-400 hover:text-indigo-600 transition-colors">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </button>
+            </div>
+            @if(isset($is_search) && $is_search)
+            <a href="{{ route('products.index', request()->except(['q', 'page'])) }}" class="mt-3 inline-flex items-center text-sm text-indigo-600 font-semibold hover:text-indigo-700 transition-colors gap-1">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                Clear search
+            </a>
+            @endif
+        </form>
     </div>
 
     {{-- Main Layout Grid --}}

@@ -17,7 +17,7 @@
 
 namespace App\Policies;
 
-use App\Models\{Product, User};
+use App\Models\{Admin, Product, User};
 use Illuminate\Auth\Access\{HandlesAuthorization, Response};
 use Illuminate\Support\Facades\Auth;
 
@@ -43,7 +43,7 @@ class ProductPolicy
     // behaviour to Gate::before() but scoped to this one model's policy.
     //
     // NOTE: before() also receives ?User, so the same dual-guard check applies.
-    public function before(?User $user, string $ability): ?bool
+    public function before(User|Admin|null $user, string $ability): ?bool
     {
         // Any authenticated admin gets unrestricted access to all product operations.
         if ($this->isAdmin()) {
@@ -57,7 +57,7 @@ class ProductPolicy
      * View the product listing page.
      * Public — guests may browse the catalogue.
      */
-    public function viewAny(?User $user): bool
+    public function viewAny(User|Admin|null $user): bool
     {
         return true;
     }
@@ -66,7 +66,7 @@ class ProductPolicy
      * View a single product detail page.
      * Public — guests may view any product.
      */
-    public function view(?User $user, Product $product): bool
+    public function view(User|Admin|null $user, Product $product): bool
     {
         return true;
     }
@@ -74,7 +74,7 @@ class ProductPolicy
     /**
      * Create a new product. Admins only.
      */
-    public function create(?User $user): bool
+    public function create(User|Admin|null $user): bool
     {
         return $this->isAdmin();
     }
@@ -82,7 +82,7 @@ class ProductPolicy
     /**
      * Update any existing product. Admins only.
      */
-    public function update(?User $user, Product $product): bool
+    public function update(User|Admin|null $user, Product $product): bool
     {
         return $this->isAdmin();
     }
@@ -94,7 +94,7 @@ class ProductPolicy
      * the caller cannot see returns HTTP 404 rather than 403. This prevents
      * leaking the existence of products that are hidden or admin-only.
      */
-    public function delete(?User $user, Product $product): Response|bool
+    public function delete(User|Admin|null $user, Product $product): Response|bool
     {
         if ($this->isAdmin()) {
             return Response::allow();
@@ -109,7 +109,7 @@ class ProductPolicy
     /**
      * Restore a soft-deleted product. Admins only.
      */
-    public function restore(?User $user, Product $product): bool
+    public function restore(User|Admin|null $user, Product $product): bool
     {
         return $this->isAdmin();
     }
@@ -117,7 +117,7 @@ class ProductPolicy
     /**
      * Permanently delete a product from the database. Admins only.
      */
-    public function forceDelete(?User $user, Product $product): bool
+    public function forceDelete(User|Admin|null $user, Product $product): bool
     {
         return $this->isAdmin();
     }

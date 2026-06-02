@@ -28,6 +28,8 @@ class Order extends Model
         'placed_at',
         'invoice_path',
         'is_digital',
+        'billing_address',
+        'shipping_address',
     ];
 
     public function getRouteKeyName(): string
@@ -42,6 +44,8 @@ class Order extends Model
         'placed_at'       => 'datetime',
         'updated_at'      => 'datetime',
         'is_digital'      => 'boolean',
+        'billing_address'  => 'encrypted', // Exercise 54.2
+        'shipping_address' => 'encrypted', // Exercise 54.2
     ];
 
     public function items(): \Illuminate\Database\Eloquent\Relations\HasMany

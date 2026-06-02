@@ -1,15 +1,18 @@
-{{-- ── Exercise 49.3: Impersonation Banner ───────────────────────────── --}}
-{{-- Shown only when an admin has switched into a customer session        --}}
-@if(session('impersonating_admin_id'))
+{{-- ── Impersonation Banner ───────────────────────────────────────────── --}}
+{{-- Shown only when an admin has switched into a customer session.        --}}
+{{-- $isImpersonating is shared by CheckImpersonation middleware.          --}}
+@if($isImpersonating)
 <div class="bg-amber-400 text-amber-950 text-sm font-semibold px-4 py-2 flex items-center justify-between gap-4 shadow">
     <span class="flex items-center gap-2">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/>
         </svg>
-        ⚠️ You are impersonating
-        <strong>{{ auth()->user()?->name ?? 'a customer' }}</strong>
-        ({{ auth()->user()?->email }}) as Admin.
+        ⚠️ Admin
+        <strong>{{ $impersonatingAdmin?->name ?? 'Unknown' }}</strong>
+        is viewing as
+        <strong>{{ $impersonatedUser?->name ?? 'a customer' }}</strong>
+        ({{ $impersonatedUser?->email }})
     </span>
     <form method="POST" action="{{ route('admin.impersonate.stop') }}">
         @csrf
@@ -20,6 +23,7 @@
     </form>
 </div>
 @endif
+
 
 <nav x-data="{ open: false }" class="bg-white border-b border-gray-100">
     <!-- Primary Navigation Menu -->
@@ -55,7 +59,7 @@
                         {{ __('common.recently_viewed') }}
                     </x-nav-link>
             @if (Auth::guard('admin')->check())
-                    <x-nav-link :href="route('logs.index')" :active="request()->routeIs('logs.*')">
+                    <x-nav-link :href="route('admin.logs.index')" :active="request()->routeIs('admin.logs.*')">
                         {{ __('common.logs') }}
                     </x-nav-link>
                     @endif

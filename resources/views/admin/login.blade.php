@@ -122,13 +122,6 @@
                             Sign in
                         </button>
                     </div>
-                    
-                    {{-- Create account --}}
-                    <div class="text-center pt-2">
-                        <p class="text-xs font-medium text-slate-500">
-                            Don't have an account? <a href="#" class="font-semibold text-sky-600 hover:text-sky-700 transition-colors">Create one</a>
-                        </p>
-                    </div>
                 </form>
             </div>
         </div>

@@ -45,7 +45,7 @@ class SendOrderPlacedMail extends Mailable implements ShouldQueue
     public function envelope(): Envelope
     {
         return new Envelope(
-            from: new Address('send@updates.vinayxdev.me', 'vinay'),
+            from: new Address('send@updates.vinayxdev.me'),
             subject: 'Send Mail',
         );
     }

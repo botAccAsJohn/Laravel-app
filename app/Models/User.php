@@ -10,6 +10,7 @@ use Illuminate\Contracts\Translation\HasLocalePreference;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable implements HasLocalePreference, MustVerifyEmail
@@ -24,6 +25,11 @@ class User extends Authenticatable implements HasLocalePreference, MustVerifyEma
         'preferred_locale',
         'subscription_tier',
         'webhook_url',
+        'force_password_reset', // Exercise 52.3
+        'phone',
+        'address',
+        'tax_id',
+        'extra_attributes',
     ];
 
     protected $hidden = [
@@ -34,9 +40,39 @@ class User extends Authenticatable implements HasLocalePreference, MustVerifyEma
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
-            'password'          => 'hashed',
+            'email_verified_at'    => 'datetime',
+            'password'             => 'hashed',
+            'force_password_reset' => 'boolean', // Exercise 52.3
+            'phone'                => 'encrypted', // Exercise 54.2
+            'address'              => 'encrypted', // Exercise 54.2
+            'tax_id'               => 'encrypted', // Exercise 54.2
+            'extra_attributes'     => 'encrypted:array', // Exercise 54.2
         ];
+    }
+
+    /**
+     * Exercise 54.2 — Blind Index Generation
+     * Used for timing-safe lookup of randomly-encrypted fields.
+     */
+    public static function generateBlindIndex(?string $value): ?string
+    {
+        if (is_null($value) || $value === '') {
+            return null;
+        }
+        return hash_hmac('sha256', $value, config('app.key') . 'user_blind_index_salt');
+    }
+
+
+    public static function findByPhone(string $phone): ?self
+    {
+        $bindex = self::generateBlindIndex($phone);
+        return static::where('phone_bindex', $bindex)->first();
+    }
+
+    public static function findByTaxId(string $taxId): ?self
+    {
+        $bindex = self::generateBlindIndex($taxId);
+        return static::where('tax_id_bindex', $bindex)->first();
     }
 
     /**
@@ -54,12 +90,27 @@ class User extends Authenticatable implements HasLocalePreference, MustVerifyEma
             'preferred_locale',
             'email_verified_at',
             'remember_token',
+            'force_password_reset', // Exercise 52.3 — middleware reads this from cache
         ];
     }
 
     public function orders()
     {
         return $this->hasMany(Order::class);
+    }
+
+    // ── Exercise 52.2: Password History ────────────────────────────────────────
+
+    public function passwordHistories(): HasMany
+    {
+        return $this->hasMany(PasswordHistory::class);
+    }
+
+    // ── Exercise 53.3: API Keys ───────────────────────────────────────────────
+
+    public function apiKeys(): HasMany
+    {
+        return $this->hasMany(ApiKey::class);
     }
 
     // ── Exercise 50.4: RBAC ─────────────────────────────────────────────────────
@@ -71,8 +122,7 @@ class User extends Authenticatable implements HasLocalePreference, MustVerifyEma
     public function roles(): BelongsToMany
     {
         return $this->belongsToMany(Role::class, 'role_user')
-                    ->withPivot(['assigned_by', 'assigned_at'])
-                    ->withTimestamps();
+                    ->withPivot(['assigned_by', 'assigned_at']);
     }
 
     /**
@@ -139,6 +189,15 @@ class User extends Authenticatable implements HasLocalePreference, MustVerifyEma
 
     protected static function booted(): void
     {
+        static::saving(function (User $user) {
+            if ($user->isDirty('phone')) {
+                $user->phone_bindex = self::generateBlindIndex($user->phone);
+            }
+            if ($user->isDirty('tax_id')) {
+                $user->tax_id_bindex = self::generateBlindIndex($user->tax_id);
+            }
+        });
+
         static::updated(function (User $user) {
             Cache::tags(['users'])->forget("auth_user:{$user->id}");
         });

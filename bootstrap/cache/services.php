@@ -45,6 +45,7 @@
     41 => 'App\\Providers\\EventServiceProvider',
     42 => 'App\\Providers\\ObserverServiceProvider',
     43 => 'Resend\\Laravel\\ResendServiceProvider',
+    44 => 'App\\Providers\\SecretsVaultServiceProvider',
   ),
   'eager' => 
   array (
@@ -76,6 +77,7 @@
     25 => 'App\\Providers\\EventServiceProvider',
     26 => 'App\\Providers\\ObserverServiceProvider',
     27 => 'Resend\\Laravel\\ResendServiceProvider',
+    28 => 'App\\Providers\\SecretsVaultServiceProvider',
   ),
   'deferred' => 
   array (

@@ -44,7 +44,7 @@ class SendOrderDeliveredMail extends Mailable implements ShouldQueue
     public function envelope(): Envelope
     {
         return new Envelope(
-            from: new Address('send@updates.vinayxdev.me', 'vinay'),
+            from: new Address('send@updates.vinayxdev.me'),
             subject: 'Your Order Has Been Delivered',
         );
     }

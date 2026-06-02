@@ -6,11 +6,15 @@ use App\Services\{OrderService, ExternalApiService, CartService, AIService, Logi
 use App\Listeners\HandleFailedJob;
 use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Support\ServiceProvider;
-use Illuminate\Support\Facades\{Event, Gate, Log, RateLimiter, Blade, View, Auth, Response, DB, Http, Mail, Schema};
+use Illuminate\Support\Facades\{Event, Gate, URL, Log, RateLimiter, Blade, View, Auth, Response, DB, Http, Mail, Schema};
 use App\Auth\RedisUserProvider;
 use App\Models\{Permission, User};
 use Illuminate\Pagination\Paginator;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Auth\Notifications\VerifyEmail;
+use Illuminate\Auth\Notifications\ResetPassword;
+use Carbon\Carbon;
+
 
 
 class AppServiceProvider extends ServiceProvider
@@ -37,10 +41,20 @@ class AppServiceProvider extends ServiceProvider
         Log::info('[STEP 5] AppServiceProvider boot() called all services ready');
 
         // Customise the verification URL callback
-        \Illuminate\Auth\Notifications\VerifyEmail::createUrlUsing(function ($notifiable, $notification) {
-            return \Illuminate\Support\Facades\URL::temporarySignedRoute(
+        // \Illuminate\Auth\Notifications\VerifyEmail::createUrlUsing(function ($notifiable) { // $notification
+        //     return \Illuminate\Support\Facades\URL::temporarySignedRoute(
+        //         'verification.verify',
+        //         now()->addMinutes(config('auth.verification.expire', 60)),
+        //         [
+        //             'id' => $notifiable->getKey(),
+        //             'hash' => sha1($notifiable->getEmailForVerification()),
+        //         ]
+        //     );
+        // });
+        VerifyEmail::createUrlUsing(function (object $notifiable) {
+            return URL::temporarySignedRoute(
                 'verification.verify',
-                now()->addMinutes(config('auth.verification.expire', 60)),
+                Carbon::now()->addMinutes(60),
                 [
                     'id' => $notifiable->getKey(),
                     'hash' => sha1($notifiable->getEmailForVerification()),
@@ -48,7 +62,67 @@ class AppServiceProvider extends ServiceProvider
             );
         });
 
-        // ── Exercise 50.4: Dynamic Gate definitions from permissions table ────
+        // Module 36 locale on verification email
+        VerifyEmail::toMailUsing(function (object $notifiable, string $url) {
+            $locale = $notifiable->preferred_locale ?? app()->getLocale();
+
+            return (new \Illuminate\Notifications\Messages\MailMessage)
+                ->subject(__('mail.verify_subject', [], $locale))
+                ->line(__('mail.verify_intro', [], $locale))
+                ->action(__('mail.verify_action', [], $locale), $url)
+                ->line(__('mail.verify_footer', [], $locale));
+        });
+
+        // ── Exercise 52.1: Customise the password-reset URL ──────────────────
+        //
+        // createUrlUsing() lets us control the URL shape — e.g. pointing to a
+        // custom frontend SPA or applying a signed route. Here we keep the
+        // default Breeze route but make it explicit (the closure receives the
+        // notifiable user and the raw token).
+        ResetPassword::createUrlUsing(function (object $notifiable, string $token) {
+            return url(route('password.reset', [
+                'token' => $token,
+                'email' => $notifiable->getEmailForPasswordReset(),
+            ], false));
+        });
+
+        // ── Exercise 52.1: Branded, localised reset email ────────────────────
+        //
+        // toMailUsing() replaces the default Laravel reset notification with our
+        // own HTML template (resources/views/email/password-reset.blade.php).
+        //
+        // Rate-limiter note (Exercise 52.1 / 47.2)
+        // ─────────────────────────────────────────
+        // The 'password-reset' limiter (defined below) is keyed by EMAIL, not
+        // by IP. Here is why:
+        //   • IP-based limiting is trivially bypassed with Tor, proxies, or
+        //     botnets — an attacker sends 3 requests from 3 different IPs.
+        //   • The goal is to prevent a targeted victim's mailbox from being
+        //     flooded with reset links. The attack vector is email-targeted,
+        //     so the key must be the email address.
+        //   • An attacker who controls many IPs but does NOT control the
+        //     victim's email cannot bypass an email-keyed limiter.
+        ResetPassword::toMailUsing(function (object $notifiable, string $token) {
+            $locale = $notifiable->preferred_locale ?? app()->getLocale();
+            $name   = $notifiable->name ?? $notifiable->email;
+
+            // Generate the absolute reset password URL using the token
+            $url = url(route('password.reset', [
+                'token' => $token,
+                'email' => $notifiable->getEmailForPasswordReset(),
+            ], false));
+
+            return (new \Illuminate\Mail\Mailable)
+                ->subject(__('reset_subject', [], $locale))
+                ->html(
+                    view('email.password-reset', [
+                        'resetUrl' => $url,
+                        'name'     => $name,
+                        'locale'   => $locale,
+                    ])->render()
+                );
+        });
+
         //
         // Instead of hard-coding every permission as a Gate::define() call,
         // we load all permissions from the database at boot time and register
@@ -60,10 +134,15 @@ class AppServiceProvider extends ServiceProvider
         // Schema::hasTable guard: prevents crashing before the first migration.
         if (Schema::hasTable('permissions')) {
             Permission::all()->each(function (Permission $permission) {
-                Gate::define($permission->name, function (User $user) use ($permission) {
+                Gate::define($permission->name, function ($user) use ($permission) {
+                    // Admins implicitly have all dynamically defined permissions
+                    if ($user instanceof \App\Models\Admin) {
+                        return true;
+                    }
+
                     // Delegates to the User model's permission check which
                     // flattens all roles → permissions and caches the result.
-                    return $user->hasPermission($permission->name);
+                    return method_exists($user, 'hasPermission') ? $user->hasPermission($permission->name) : false;
                 });
             });
         }
@@ -191,6 +270,44 @@ class AppServiceProvider extends ServiceProvider
                         ->withHeaders($headers);
                 });
         });
+
+        // 6. 'api-tiered' rate limiter: differentiated by subscription tier (Exercise 47.4)
+        RateLimiter::for('api-tiered', function (\Illuminate\Http\Request $request) {
+            $user = $request->user();
+            $tier = $user?->subscription_tier ?? 'free';
+            $key = 'api-tiered:' . ($user?->id ?? $request->ip());
+
+            $limit = match ($tier) {
+                'enterprise' => \Illuminate\Cache\RateLimiting\Limit::perMinute(6000)->by($key),
+                'pro'        => \Illuminate\Cache\RateLimiting\Limit::perMinute(600)->by($key),
+                'free'       => \Illuminate\Cache\RateLimiting\Limit::perMinute(60)->by($key),
+                default      => \Illuminate\Cache\RateLimiting\Limit::perMinute(60)->by($key),
+            };
+
+            return $limit->response(function (\Illuminate\Http\Request $request, array $headers) use ($tier) {
+                Log::channel('security')->warning('Rate limit hit: api-tiered', [
+                    'ip' => $request->ip(),
+                    'user_id' => $request->user()?->id,
+                    'tier' => $tier,
+                    'url' => $request->fullUrl(),
+                ]);
+
+                $seconds = $headers['Retry-After'] ?? 60;
+                $message = "API rate limit exceeded for {$tier} tier. Please try again in {$seconds} seconds.";
+
+                return response()->json([
+                    'error' => $message,
+                    'tier' => $tier,
+                    'limit' => match ($tier) {
+                        'enterprise' => 6000,
+                        'pro' => 600,
+                        default => 60,
+                    },
+                    'retry_after' => $seconds,
+                ], 429, $headers);
+            });
+        });
+
         // Only provide user to layouts, not every single partial/component
         // View::composer('*', function ($view) {
         View::composer(['layouts.*', 'admin.*', 'dashboard'], function ($view) {
@@ -220,7 +337,7 @@ class AppServiceProvider extends ServiceProvider
             Mail::alwaysTo(config('mail.admin_email'));
             Model::preventLazyLoading();
             DB::listen(function ($query) {
-                if($query->time >= 100){
+                if ($query->time >= 100) {
                     Log::channel('SlowQueries')->info('slow query', [
                         'sql' => $query->sql,
                         'bindings' => $query->bindings,

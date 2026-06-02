@@ -27,7 +27,11 @@
 
 <body class="font-sans antialiased">
     <div class="min-h-screen bg-gray-100">
-        @if(Auth::guard('admin')->check())
+        @if($isImpersonating)
+            {{-- Admin is impersonating — show customer nav so the admin sees  --}}
+            {{-- exactly what the user sees. Banner is inside navigation.blade. --}}
+            @include('layouts.navigation')
+        @elseif(Auth::guard('admin')->check())
             @include('layouts.admin_navigation')
         @else
             @include('layouts.navigation')

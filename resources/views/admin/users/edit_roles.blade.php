@@ -106,8 +106,9 @@
         </div>
         <div class="p-6">
             @php
-                $effectivePerms = $user->roles->load('permissions')
-                    ->flatMap(fn($r) => $r->permissions)
+                $rolesCollection = $user->roles ?? collect();
+                $effectivePerms = $rolesCollection
+                    ->flatMap(fn($r) => $r->permissions ?? collect())
                     ->unique('id')
                     ->sortBy('group');
             @endphp

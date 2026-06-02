@@ -4,10 +4,10 @@ use App\Models\User;
 use App\Models\OrderAnalytics;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\{Route, DB, Log, File, Http, URL, Mail};
-use App\Http\Controllers\Api\{AuthController,TokenController};      
+use App\Http\Controllers\Api\{AuthController, TokenController, ApiKeyController};
 
-Route::middleware(['throttle:api', 'api.rate.headers'])->group(function () {
-
+// Exercise 47.4: Tier-based rate limiting for authenticated users
+Route::middleware(['auth:sanctum', 'throttle:api-tiered'])->group(function () {
     Route::get('/download', function () {
         // Get all files in the 'products' directory inside 'public'
         $files = File::files(storage_path('app\public\products'));
@@ -27,6 +27,32 @@ Route::middleware(['throttle:api', 'api.rate.headers'])->group(function () {
     Route::get('/downloadInvoice', function (\App\Services\OrderService $orderService) {
         $order = \App\Models\Order::firstOrFail();
         return $orderService->downloadInvoice($order);
+    });
+
+    // Routes for External API Service
+    Route::get('/external-users', [\App\Http\Controllers\UserController::class, 'index']);
+    Route::get('/external-users/{id}', [\App\Http\Controllers\UserController::class, 'show']);
+    Route::post('/external-users', [\App\Http\Controllers\UserController::class, 'store']);
+
+    Route::post('/logout', [AuthController::class, 'logout']);
+    Route::get('/user', fn(Request $r) => $r->user());
+
+    // Device management (Sanctum tokens)
+    Route::get('/tokens', [TokenController::class, 'index']);
+    Route::delete('/tokens/{id}', [TokenController::class, 'revoke']);
+    Route::delete('/tokens', [TokenController::class, 'revokeAll']);
+
+    // Exercise 53.3: API Key Management
+    Route::get('/api-keys', [ApiKeyController::class, 'index']);
+    Route::post('/api-keys', [ApiKeyController::class, 'store']);
+    Route::delete('/api-keys/{id}', [ApiKeyController::class, 'destroy']);
+});
+
+// Public and standard API routes (uses basic throttle:api)
+Route::middleware(['throttle:api', 'api.rate.headers'])->group(function () {
+
+    Route::middleware(['auth:sanctum'])->group(function () {
+        // Note: Authenticated routes are now handled by the tier-based limiter above
     });
 
     Route::get('/calling/getProducts', [\App\Http\Controllers\FakeStoreController::class, 'index']);
@@ -51,15 +77,6 @@ Route::middleware(['throttle:api', 'api.rate.headers'])->group(function () {
         }
         return response()->json($response->json());
     });
-
-    // Routes for External API Service
-    Route::get('/external-users', [\App\Http\Controllers\UserController::class, 'index']);
-    Route::get('/external-users/{id}', [\App\Http\Controllers\UserController::class, 'show']);
-    Route::post('/external-users', [\App\Http\Controllers\UserController::class, 'store']);
-    // Routes for External API Service
-    Route::get('/external-users', [\App\Http\Controllers\UserController::class, 'index']);
-    Route::get('/external-users/{id}', [\App\Http\Controllers\UserController::class, 'show']);
-    Route::post('/external-users', [\App\Http\Controllers\UserController::class, 'store']);
 
     Route::get('/pool', function () {
         $responses = Http::pool(function ($http) {
@@ -92,6 +109,44 @@ Route::middleware(['throttle:api', 'api.rate.headers'])->group(function () {
         }
         return "User {$user} unsubscribed successfully";
     })->name('unsubscribe');
+
+    // ── Exercise 54.3: Encrypted Payloads (alternative to Signed URLs) ─────
+    Route::get('/generate-encrypted-link/{id}', function ($id) {
+        // We use JSON encoding + Crypt::encryptString() to avoid PHP serialization/object-injection risks.
+        $payload = Crypt::encryptString(json_encode([
+            'user' => $id,
+            'expires_at' => now()->addHour()->timestamp
+        ]));
+
+        return response()->json([
+            'url' => url('/api/unsubscribe-encrypted/' . urlencode($payload))
+        ]);
+    });
+
+    Route::get('/unsubscribe-encrypted/{payload}', function ($payload) {
+        try {
+            // Decrypt the raw string payload safely (no unserialize)
+            $decryptedJson = Crypt::decryptString(urldecode($payload));
+            $data = json_decode($decryptedJson, true);
+
+            if (!$data || !isset($data['user']) || !isset($data['expires_at'])) {
+                abort(400, 'Malformed payload.');
+            }
+
+            // Validate expiry
+            if (time() > $data['expires_at']) {
+                abort(403, 'This link has expired.');
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'message' => "User {$data['user']} unsubscribed successfully via encrypted payload.",
+            ]);
+        } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
+            abort(403, 'Invalid or tampered encrypted payload.');
+        }
+    });
+
 
     // ── Slack Interactions (Exercise 39.4) ──────────────────────────────
     // ── Slack Interactions (Exercise 39.4) ──────────────────────────────
@@ -149,22 +204,32 @@ Route::middleware(['throttle:api', 'api.rate.headers'])->group(function () {
         return $products;
     })->middleware('throttle:search');
 
+    // Exercise 44.2: Cursor pagination for efficient scrolling of large datasets
+    Route::get('/orders', function (Request $request) {
+        $user = $request->user();
 
-    
+        $orders = \App\Models\Order::query()
+            ->where('user_id', $user->id)
+            ->latest('placed_at')
+            ->with(['items.product'])
+            ->cursorPaginate(20);
 
-// Public
-Route::post('/login',    [AuthController::class, 'login']);
-Route::post('/register', [AuthController::class, 'register']);
+        return response()->json([
+            'data' => $orders->items(),
+            'pagination' => [
+                'next_cursor' => $orders->nextCursor()?->encode(),
+                'prev_cursor' => $orders->previousCursor()?->encode(),
+                'per_page' => 20,
+            ]
+        ]);
+    })->middleware(['auth:sanctum', 'throttle:api-tiered']);
 
-// Protected
-Route::middleware('auth:sanctum')->group(function () {
-    Route::post('/logout',  [AuthController::class, 'logout']);
-    Route::get('/user',     fn(Request $r) => $r->user());
 
-    // Device management
-    Route::get('/tokens',            [TokenController::class, 'index']);
-    Route::delete('/tokens/{id}',    [TokenController::class, 'revoke']);
-    Route::delete('/tokens',         [TokenController::class, 'revokeAll']);
-});
+
+    // Public
+    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/register', [AuthController::class, 'register']);
+
+    // Protected routes now handled above with tier-based rate limiting
 
 });

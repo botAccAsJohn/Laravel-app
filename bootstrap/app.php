@@ -6,6 +6,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use App\Http\Middleware\CheckRole;
 use App\Http\Middleware\ReqContextMiddleware;
+use App\Http\Middleware\RequirePasswordReset;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -29,15 +30,20 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->appendToGroup('web', \App\Http\Middleware\SetLocale::class);
         $middleware->appendToGroup('web', ReqContextMiddleware::class);
+        $middleware->appendToGroup('web', \App\Http\Middleware\CheckImpersonation::class);
         // Exercise 49.5: required for Auth::logoutOtherDevices() to invalidate
         // other session rows. Must be in the web group, not api.
         $middleware->appendToGroup('web', \Illuminate\Session\Middleware\AuthenticateSession::class);
+        // Exercise 52.3: Block all routes for users who must reset their password.
+        $middleware->appendToGroup('web', RequirePasswordReset::class);
         $middleware->append(\App\Http\Middleware\LogRequestLifecycle::class);
         $middleware->appendToPriorityList(ReqContextMiddleware::class, 'auth');
         $middleware->alias([
-            'api.rate.headers' => \App\Http\Middleware\ApiRateLimitHeaders::class,
-            'role' => CheckRole::class,
-            'slack.verify' => \App\Http\Middleware\VerifySlackSignature::class,
+            'api.rate.headers'     => \App\Http\Middleware\ApiRateLimitHeaders::class,
+            'role'                 => CheckRole::class,
+            'slack.verify'         => \App\Http\Middleware\VerifySlackSignature::class,
+            'force.password.reset' => RequirePasswordReset::class,
+            'auth.apikey'          => \App\Http\Middleware\AuthenticateApiKey::class, // Exercise 53.3
         ]);
         // ── Redirect unauthenticated users ──────────────────────────────
         // When a guest hits a protected route, send them to the correct login
@@ -61,8 +67,6 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->validateCsrfTokens(except: [
             '/post',
-            '/products',
-            '/products/*',
             '/ai/ask',
             '/ai/chat',
             '/ai/history',

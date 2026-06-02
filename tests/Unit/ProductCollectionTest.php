@@ -3,6 +3,8 @@
 use App\Collections\ProductCollection;
 use App\Models\Product;
 
+uses(Tests\TestCase::class);
+
 test('product collection filters by in stock', function () {
     $p1 = new Product(['quantity' => 5]);
     $p2 = new Product(['quantity' => 0]);
@@ -13,7 +15,7 @@ test('product collection filters by in stock', function () {
     $inStock = $collection->inStock();
 
     expect($inStock)->toHaveCount(1);
-    expect($inStock->first()->quantity)->toBe(5);
+    expect((int)$inStock->first()->quantity)->toBe(5);
 });
 
 test('product collection filters by price range', function () {
@@ -26,7 +28,7 @@ test('product collection filters by price range', function () {
     $filtered = $collection->byPriceRange(15.00, 30.00);
 
     expect($filtered)->toHaveCount(1);
-    expect($filtered->first()->price)->toBe(20.00);
+    expect((float)$filtered->first()->price)->toBe(20.00);
 });
 
 test('product collection filters by featured', function () {
@@ -51,7 +53,7 @@ test('product collection filters by on sale', function () {
     $onSale = $collection->onSale();
 
     expect($onSale)->toHaveCount(1);
-    expect($onSale->first()->discount_price)->toBe(80.00);
+    expect((float)$onSale->first()->discount_price)->toBe(80.00);
 });
 
 test('product collection calculates total value', function () {
@@ -60,7 +62,7 @@ test('product collection calculates total value', function () {
 
     $collection = new ProductCollection([$p1, $p2]);
 
-    expect($collection->totalValue())->toBe(80.00);
+    expect((float)$collection->totalValue())->toBe(80.00);
 });
 
 test('product collection filters by low stock', function () {
