@@ -24,3 +24,4 @@ Thumbs.db
 ThingsToDo.md
 database/older_migrations
 /docs
+*.md

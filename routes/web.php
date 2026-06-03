@@ -13,7 +13,7 @@ Route::get('/', function () {
 })->name('welcome');
 
 Route::get('/dashboard', function () {
-    if (Auth::guard('admin')->check()) {
+    if (Auth::guard('admin')->check() && !is_impersonating()) {
         return redirect()->route('admin.dashboard');
     }
     return redirect()->route('products.index');

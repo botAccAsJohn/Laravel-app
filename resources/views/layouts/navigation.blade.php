@@ -33,7 +33,7 @@
 
                 <!-- Navigation Links -->
                 <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-            @if (Auth::guard('admin')->check())
+            @if (Auth::guard('admin')->check() && !is_impersonating())
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                         {{ __('common.admin_panel') }}
                     </x-nav-link>
@@ -58,7 +58,7 @@
                     <x-nav-link :href="route('recently.index')" :active="request()->routeIs('recently.*')">
                         {{ __('common.recently_viewed') }}
                     </x-nav-link>
-            @if (Auth::guard('admin')->check())
+            @if (Auth::guard('admin')->check() && !is_impersonating())
                     <x-nav-link :href="route('admin.logs.index')" :active="request()->routeIs('admin.logs.*')">
                         {{ __('common.logs') }}
                     </x-nav-link>
@@ -237,7 +237,7 @@
 
     <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden">
         <div class="pt-2 pb-3 space-y-1">
-            @if (Auth::guard('admin')->check())
+            @if (Auth::guard('admin')->check() && !is_impersonating())
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                 {{ __('common.admin_panel') }}
             </x-responsive-nav-link>

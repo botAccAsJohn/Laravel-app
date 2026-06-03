@@ -30,7 +30,7 @@ class ProductPolicy
     // admins authenticate through a separate guard and never populate $user.
     private function isAdmin(): bool
     {
-        return Auth::guard('admin')->check();
+        return Auth::guard('admin')->check() && !is_impersonating();
     }
 
     // ── Exercise 50.3: Policy before() — super-admin bypass ──────────────────

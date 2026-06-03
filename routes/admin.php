@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\{
     AuthController,
     UserRoleController,
+    RoleController,
     ReportManagerController,
     SalesAnalyticsController,
     AdminAlertController,
@@ -15,21 +16,6 @@ use App\Http\Controllers\Auth\ManualAuthController;
 use App\Http\Controllers\Product2Controller;
 use App\Http\Controllers\CacheMonitorController;
 
-/*
-|--------------------------------------------------------------------------
-| Admin Routes
-|--------------------------------------------------------------------------
-|
-| All routes in this file are automatically wrapped with the `web`
-| middleware group, prefixed with `/admin`, and named with the `admin.`
-| prefix by bootstrap/app.php — no need to repeat those here.
-|
-*/
-
-// ── Unauthenticated / Guest Routes ──────────────────────────────────────
-// `guest:admin` checks the ADMIN guard specifically. Without the guard
-// argument, Laravel would fall back to the default `web` guard, meaning
-// an authenticated admin would not be redirected away from the login page.
 Route::middleware('guest:admin')->group(function () {
 
     Route::get('login', [AuthController::class, 'showLogin'])
@@ -52,8 +38,8 @@ Route::middleware(['auth:admin', 'verified'])->group(function () {
 
     // ── Impersonation (→ ImpersonationController) ─────────────────────────
     Route::get('impersonate',           [ImpersonationController::class, 'index'])->name('impersonate.index');
-    Route::post('impersonate/{user}',    [ImpersonationController::class, 'impersonate'])->name('impersonate.start');
     Route::post('impersonate/stop',      [ImpersonationController::class, 'stopImpersonating'])->name('impersonate.stop');
+    Route::post('impersonate/{user}',    [ImpersonationController::class, 'impersonate'])->name('impersonate.start');
 
     // ── Exercise 50.4: User Role Management ───────────────────────────────────────
     Route::get('users',                         [UserRoleController::class, 'index'])->name('users.index');
@@ -63,8 +49,9 @@ Route::middleware(['auth:admin', 'verified'])->group(function () {
     Route::delete('users/{user}/roles/revoke',  [UserRoleController::class, 'revokeRole'])->name('users.revoke-role');
     Route::post('users/{user}/magic-link',      [UserRoleController::class, 'generateMagicLink'])->name('users.magic-link');
 
-    // Exercise 52.3 — Force a mandatory password reset on a user account.
-    // The admin POSTs with an optional `reason` field.
+    // ── Role Management (CRUD) ────────────────────────────────────────────
+    Route::resource('roles', RoleController::class)->except(['show']);
+
     Route::post('users/{user}/force-reset', ForcePasswordResetController::class)->name('users.force-reset');
 
     // ── Product Management (CRUD — create/edit/update/delete) ────────────
@@ -91,7 +78,6 @@ Route::middleware(['auth:admin', 'verified'])->group(function () {
     Route::get('alerts',  [AdminAlertController::class, 'index'])->name('alerts.index');
     Route::post('alerts', [AdminAlertController::class, 'store'])->name('alerts.store');
 
-    // ── Product Import (Exercise 46.3) ───────────────────────────────────
     Route::get('import',                                  [ProductImportController::class, 'showForm'])->name('import.form');
     Route::post('import',                                 [ProductImportController::class, 'import'])->name('import.process');
     Route::get('import/queued/{batchCacheKey}/poll',      [ProductImportController::class, 'pollBatchId'])->name('import.poll');

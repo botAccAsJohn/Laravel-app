@@ -1,26 +1,4 @@
 <?php
-// app/Policies/OrderPolicy.php
-//
-// Policy for the Order model.
-//
-// This project uses TWO authentication guards:
-//   • web   → App\Models\User  (customers)
-//   • admin → App\Models\Admin (administrators)
-//
-// Laravel's Gate resolves $user from the CURRENTLY AUTHENTICATED model across
-// all guards. When an Admin is logged in, the Gate passes the Admin instance —
-// so every method must accept User|Admin|null (the same union used throughout
-// AuthServiceProvider). Using ?User alone causes a TypeError when Admin is given.
-//
-// Admin checks are performed via Auth::guard('admin')->check() in isAdmin(),
-// not by inspecting the $user argument (which may be an Admin or null).
-//
-// Who can do what:
-//   viewAny  → authenticated customers (own orders); admins via before()
-//   view     → customers see only their own order; admins via before()
-//   update   → admins only (via before())
-//   delete   → admins only (via before())
-//   cancel   → customers (own order) OR admins (via before())
 
 namespace App\Policies;
 
@@ -40,7 +18,7 @@ class OrderPolicy
     // is active. Auth::guard('admin')->check() is always unambiguous.
     private function isAdmin(): bool
     {
-        return Auth::guard('admin')->check();
+        return Auth::guard('admin')->check() && !is_impersonating();
     }
 
     // ── before() — admin bypass ───────────────────────────────────────────────
@@ -58,6 +36,19 @@ class OrderPolicy
         }
 
         return null; // fall through to the specific method
+    }
+
+    /**
+     * Can the user create (place) a new order?
+     * Admins: handled by before(). Customers: only if they have the 'place_order' permission.
+     *
+     * This is the primary enforcement point for the checkout flow.
+     * StoreOrderRequest::authorize() and OrderController::create()/store()
+     * both delegate here via Gate::authorize('create', Order::class).
+     */
+    public function create(User|Admin|null $user): bool
+    {
+        return $user instanceof User && $user->hasPermission('place_order');
     }
 
     /**

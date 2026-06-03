@@ -111,6 +111,12 @@ return [
             // Users must wait 60 s before requesting another token.
             'throttle' => 60,
         ],
+        'admins' => [
+            'provider' => 'admins',
+            'table' => env('AUTH_ADMIN_PASSWORD_RESET_TOKEN_TABLE', 'admin_password_reset_tokens'),
+            'expire' => 15,
+            'throttle' => 60,
+        ],
     ],
 
     /*

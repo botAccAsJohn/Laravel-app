@@ -22,12 +22,12 @@ class OrderController extends Controller
     public function index(Request $request): View
     {
         $cursor = $request->query('cursor', '');
-        $isAdmin = Auth::guard('admin')->check();
+        $isAdmin = Auth::guard('admin')->check() && !is_impersonating();
         $user = $isAdmin ? Auth::guard('admin')->user() : Auth::user();
         $data = $this->service->getOrdersForUser($user, $cursor, $isAdmin);
 
         return view('orders.index', [
-            'orders' => $data['orders'],
+            'orders'       => $data['orders'],
             'total_orders' => $data['total_orders'],
         ]);
     }
@@ -38,11 +38,15 @@ class OrderController extends Controller
      */
     public function analytics(): View
     {
+        // Any authenticated user (web or admin) may view their own analytics.
+        // The admin guard bypasses OrderPolicy::before() so admins see all.
+        $this->authorize('viewAny', Order::class);
+
         $user = Auth::user();
 
         // Admins (admin guard) see all orders; customers see only their own.
         $query = Order::with('items.product');
-        if (!Auth::guard('admin')->check()) {
+        if (!(Auth::guard('admin')->check() && !is_impersonating())) {
             $query->where('user_id', $user->id);
         }
         $orders = $query->get();
@@ -83,6 +87,10 @@ class OrderController extends Controller
 
     public function create(Request $request): View|RedirectResponse
     {
+        // Enforce 'place_order' permission via OrderPolicy::create().
+        // Admins are passed through by OrderPolicy::before().
+        $this->authorize('create', Order::class);
+
         $summary = $this->service->cartSummary(Auth::id(), $request->query('coupon_code'));
 
         if (empty($summary['cart'])) {
@@ -102,6 +110,11 @@ class OrderController extends Controller
 
     public function store(StoreOrderRequest $request): RedirectResponse
     {
+        // StoreOrderRequest::authorize() already checks 'place_order'.
+        // This explicit authorize() call is defense-in-depth — it protects
+        // against any future changes that might bypass the FormRequest.
+        $this->authorize('create', Order::class);
+
         $validated = $request->validated();
 
         // Compute summary once — reuse for the empty-cart check AND for order creation

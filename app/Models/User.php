@@ -150,15 +150,22 @@ class User extends Authenticatable implements HasLocalePreference, MustVerifyEma
      *
      * Cached per-user for 5 minutes to avoid redundant DB queries on every
      * request. Cache is busted when roles are assigned/revoked.
+     *
+     * NOTE: The closure uses $this->roles() (the query builder) NOT $this->roles
+     * (the in-memory relation). If the User object was reconstructed from the
+     * Redis session cache, $this->roles would be an empty collection and ALL
+     * permission checks would silently fail. Querying via roles() always fetches
+     * fresh data from the database.
      */
     public function allPermissions(): \Illuminate\Support\Collection
     {
         return Cache::remember(
             "user_permissions:{$this->id}",
             now()->addMinutes(5),
-            fn () => $this->roles->load('permissions')
+            fn () => $this->roles()->with('permissions')->get()
                         ->flatMap(fn ($role) => $role->permissions->pluck('name'))
                         ->unique()
+                        ->values()
         );
     }
 

@@ -45,6 +45,12 @@ class AuthServiceProvider extends ServiceProvider
     private function registerGateBefore(): void
     {
         Gate::before(function (User|Admin|null $user, string $ability) {
+            // If the admin is impersonating, do not allow super-admin bypass to apply.
+            // They should experience the exact permissions of the customer they are impersonating.
+            if (is_impersonating()) {
+                return null;
+            }
+
             // ── Pattern 1: admin-guard super-admin ──────────────────────────
             $adminUser = Auth::guard('admin')->user();
             if ($adminUser instanceof Admin) {
@@ -80,49 +86,49 @@ class AuthServiceProvider extends ServiceProvider
         // ── view-admin-dashboard ─────────────────────────────────────────────
         // Who: any authenticated admin (admin guard).
         Gate::define('view-admin-dashboard', function (User|Admin|null $user) {
-            return Auth::guard('admin')->check();
+            return Auth::guard('admin')->check() && !is_impersonating();
         });
 
         // ── manage-products ──────────────────────────────────────────────────
         // Who: authenticated admins. Could be narrowed to specific admin roles.
         Gate::define('manage-products', function (User|Admin|null $user) {
-            return Auth::guard('admin')->check();
+            return Auth::guard('admin')->check() && !is_impersonating();
         });
 
         // ── manage-orders ────────────────────────────────────────────────────
         // Who: authenticated admins.
         Gate::define('manage-orders', function (User|Admin|null $user) {
-            return Auth::guard('admin')->check();
+            return Auth::guard('admin')->check() && !is_impersonating();
         });
 
         // ── impersonate-users ────────────────────────────────────────────────
         // Who: authenticated admins only. Regular users must never impersonate.
         Gate::define('impersonate-users', function (User|Admin|null $user) {
-            return Auth::guard('admin')->check();
+            return Auth::guard('admin')->check() && !is_impersonating();
         });
 
         // ── view-analytics ───────────────────────────────────────────────────
         // Who: authenticated admins.
         Gate::define('view-analytics', function (User|Admin|null $user) {
-            return Auth::guard('admin')->check();
+            return Auth::guard('admin')->check() && !is_impersonating();
         });
 
         // ── manage-reports ───────────────────────────────────────────────────
         // Who: authenticated admins.
         Gate::define('manage-reports', function (User|Admin|null $user) {
-            return Auth::guard('admin')->check();
+            return Auth::guard('admin')->check() && !is_impersonating();
         });
 
         // ── view-logs ────────────────────────────────────────────────────────
         // Who: authenticated admins.
         Gate::define('view-logs', function (User|Admin|null $user) {
-            return Auth::guard('admin')->check();
+            return Auth::guard('admin')->check() && !is_impersonating();
         });
 
         // ── send-admin-alerts ────────────────────────────────────────────────
         // Who: authenticated admins.
         Gate::define('send-admin-alerts', function (User|Admin|null $user) {
-            return Auth::guard('admin')->check();
+            return Auth::guard('admin')->check() && !is_impersonating();
         });
 
         // ── view-own-orders ──────────────────────────────────────────────────

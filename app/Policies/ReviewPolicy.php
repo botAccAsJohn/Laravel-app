@@ -22,7 +22,7 @@ class ReviewPolicy
 
     private function isAdmin(): bool
     {
-        return Auth::guard('admin')->check();
+        return Auth::guard('admin')->check() && !is_impersonating();
     }
 
     /**
