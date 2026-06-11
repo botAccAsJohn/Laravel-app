@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\{ProfileController, ProductController, CacheMonitorController, CartController, OrderController, RecentlyViewController, ReviewController, LocaleController, NotificationController, DeviceController, SupportTicketController, ContactController};
+use App\Http\Controllers\{ProfileController, ProductController, CacheMonitorController, CartController, OrderController, RecentlyViewController, ReviewController, LocaleController, NotificationController, DeviceController, SupportTicketController, ContactController, DashboardController};
 use App\Http\Controllers\Auth\ManualAuthController;
 use App\Http\Controllers\Admin\{
     AuthController,
@@ -13,8 +13,7 @@ use App\Http\Controllers\Admin\{
     ForcePasswordResetController,
     ImpersonationController,
 };
-use Illuminate\Support\Facades\{Route, Auth};
-use Illuminate\Foundation\Auth\EmailVerificationRequest;
+use Illuminate\Support\Facades\Route;
 
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -23,16 +22,9 @@ use Illuminate\Foundation\Auth\EmailVerificationRequest;
 
 Route::post('/locale', [LocaleController::class, 'switch'])->name('locale.switch');
 
-Route::get('/', function () {
-    return redirect()->route('products.index');
-});
+Route::redirect('/', '/products');
 
-Route::get('/dashboard', function () {
-    if (Auth::guard('admin')->check() && !is_impersonating()) {
-        return redirect()->route('admin.dashboard');
-    }
-    return redirect()->route('products.index');
-})->name('dashboard');
+Route::get('/dashboard', DashboardController::class)->name('dashboard');
 
 // ── Contact (public) ─────────────────────────────────────────────────────
 Route::get('/contact', [ContactController::class, 'index'])->name('contact.index');

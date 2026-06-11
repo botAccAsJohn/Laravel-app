@@ -27,14 +27,6 @@ if (!function_exists('order_status_badge')) {
 }
 
 
-if (!function_exists('is_impersonating')) {
-    function is_impersonating(): bool
-    {
-        return session()->has('impersonator_id');
-    }
-}
-
-
 if (!function_exists('impersonated_user')) {
     function impersonated_user(): ?User
     {

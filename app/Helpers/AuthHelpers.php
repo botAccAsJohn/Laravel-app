@@ -9,7 +9,7 @@ if (! function_exists('current_user')) {
     function current_user(): User|Admin|null
     {
         // if impersonating, return customer
-        if (session('impersonate.active')) {
+        if (session()->has('impersonator_id')) {
             return Auth::guard('web')->user();
         }
         foreach (['admin', 'web'] as $guard) {
@@ -25,7 +25,7 @@ if (! function_exists('current_guard')) {
     function current_guard(): ?string
     {
         // if impersonating, behave as customer
-        if (session('impersonate.active')) {
+        if (session()->has('impersonator_id')) {
             return 'web';
         }
         foreach (['admin', 'web'] as $guard) {
@@ -40,9 +40,9 @@ if (! function_exists('current_guard')) {
 if (! function_exists('is_impersonating')) {
     function is_impersonating(): bool
     {
-        return session('impersonate.active', false)
-        && Auth::guard('admin')->check() 
-        && Auth::guard('web')->check();
+        return session()->has('impersonator_id')
+            && Auth::guard('admin')->check()
+            && Auth::guard('web')->check();
     }
 }
 
