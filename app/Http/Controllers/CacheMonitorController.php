@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\CacheMonitorService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
 
 class CacheMonitorController extends Controller
@@ -15,6 +16,8 @@ class CacheMonitorController extends Controller
      */
     public function index(): View
     {
+        Gate::authorize('view_admin_dashboard');
+
         $stats = $this->monitor->stats();
 
         return view('admin.cache-monitor', compact('stats'));
@@ -25,6 +28,8 @@ class CacheMonitorController extends Controller
      */
     public function clear(): RedirectResponse
     {
+        Gate::authorize('view_admin_dashboard');
+
         $cleared = $this->monitor->clearAll();
 
         $count = count($cleared);

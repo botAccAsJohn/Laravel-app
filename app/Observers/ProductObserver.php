@@ -25,7 +25,7 @@ class ProductObserver
         Cache::forget('products:single:' . $product->slug);
 
         // if the stock of any product is low then send the mail to admin
-        if ($product->wasChanged('stock') && $product->stock <= 10) {
+        if ($product->wasChanged('quantity') && $product->quantity <= 10) {
             event(new \App\Events\Inventory\ProductStockLow($product));
         }
         $product->updated_by = Auth::id();

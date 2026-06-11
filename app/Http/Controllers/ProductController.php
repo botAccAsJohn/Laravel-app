@@ -11,8 +11,9 @@ use Illuminate\Http\{Request};
 use Illuminate\View\{View};
 use App\Exports\ProductsExport;
 use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Support\Facades\{Gate};
 
-class Product2Controller extends Controller
+class ProductController extends Controller
 {
     use AuthorizesRequests;
 
@@ -23,36 +24,17 @@ class Product2Controller extends Controller
 
     public function index(Request $request): View
     {
-        $query = $request->get('q', '');
-        $is_search = !empty($query);
-
-        if ($is_search) {
-            $results = $this->service->searchProducts($request, $query);
-            $products = $results['products'];
-            $total_products = $results['total'];
-            $filters = $results['filters'] ?? [];
-            $priceRange = $results['priceRange'] ?? ['min' => 0, 'max' => 0];
-        } else {
-            $allProducts = $this->service->dosomething($request);
-            $products = $allProducts['products'];
-            $total_products = null;
-            $filters = $allProducts['filters'];
-            $priceRange = $allProducts['priceRange'];
-        }
-
-        $categories = Category::getAllCategoriesFromCache();
-        $all_products_count = Product::countFromCache();
-
+        Gate::authorize('view-products', Product::class);
+        $results = $this->service->getProducts($request);
         return view('products.indexOld', [
-            'products'          => $products,
-            'all_products_count'=> $all_products_count,
-            'total_products'    => $total_products,
-            'is_search'         => $is_search,
-            'search_query'      => $query,
-            'page_title'        => $is_search ? 'Search Results' : 'All Products',
-            'categories'        => $categories,
-            'filters'           => $filters,
-            'priceRange'        => $priceRange,
+            'products'          => $results['products'],
+            'total_products'    => $results['total'],
+            'is_search'         => !empty($request->get('q')),
+            'search_query'      => $request->get('q', ''),
+            'page_title'        => !empty($request->get('q')) ? 'Search Results' : 'All Products',
+            'categories'        => Category::getAllCategoriesFromCache(),
+            'filters'           => $results['filters'],
+            'priceRange'        => $results['priceRange'],
         ]);
     }
 
@@ -74,7 +56,8 @@ class Product2Controller extends Controller
             'reviews.user'
         ]);
 
-        event(new \App\Events\Behavior\ProductViewed($product->id, Auth::id()));
+        $recentlyViewKey = app(\App\Services\RecentlyViewServices::class)->resolveRecentlyViewedKey();
+        event(new \App\Events\Behavior\ProductViewed($product->id, $recentlyViewKey));
         return view('products.show', compact('product'));
     }
 

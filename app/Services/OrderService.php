@@ -177,14 +177,17 @@ class OrderService
 
     public function cartSummary(int $userId, ?string $couponCode = null): array
     {
+        // Orders are always placed by authenticated users — build their key directly
+        $cartKey = 'cart:user:' . $userId;
+
         // Fetch cart data once and reuse for all calculations
-        $cart = $this->cartService->get($userId);
-        $cartModels = $this->cartService->getCartModels($userId);
+        $cart = $this->cartService->get($cartKey);
+        $cartModels = $this->cartService->getCartModels($cartKey);
 
         // Use calcTotal() with pre-fetched data — no extra Redis/cache reads
         $finalAmount = $this->cartService->calcTotal($cart, $cartModels);
         $totalAmount = 0.0;
-        $couponCode = $couponCode ?? $this->cartService->getAppliedCoupon($userId);
+        $couponCode = $couponCode ?? $this->cartService->getAppliedCoupon($cartKey);
 
         foreach ($cart as $productId => $item) {
             // Skip Redis metadata keys (starting with _)
@@ -291,7 +294,7 @@ class OrderService
                 }
 
                 if ($user) {
-                    $this->cartService->clear($user->id);
+                    $this->cartService->clear('cart:user:' . $user->id);
                 }
 
                 if ($summary['coupon']) {

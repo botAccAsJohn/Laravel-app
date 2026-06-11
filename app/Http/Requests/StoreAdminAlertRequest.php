@@ -12,7 +12,9 @@ class StoreAdminAlertRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return Auth::guard('admin')->check();
+        $user = $this->user() ?? $this->user('admin');
+
+        return $user && $user->can('send_alerts');
     }
 
     /**

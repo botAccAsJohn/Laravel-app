@@ -21,13 +21,18 @@ class OrderController extends Controller
 
     public function index(Request $request): View
     {
+        // Enforce OrderPolicy::viewAny(). Admins are passed through by
+        // OrderPolicy::before(); customers are allowed if they are a User instance.
+        // The service layer scopes the actual rows to the correct user automatically.
+        $this->authorize('viewAny', Order::class);
+
         $cursor = $request->query('cursor', '');
         $isAdmin = Auth::guard('admin')->check() && !is_impersonating();
         $user = $isAdmin ? Auth::guard('admin')->user() : Auth::user();
         $data = $this->service->getOrdersForUser($user, $cursor, $isAdmin);
 
         return view('orders.index', [
-            'orders'       => $data['orders'],
+            'orders' => $data['orders'],
             'total_orders' => $data['total_orders'],
         ]);
     }

@@ -134,7 +134,9 @@ class CacheMonitorService
                 $cachePrefix . 'products:single:*' => ['strip' => 'products:single:', 'labelFn' => fn($s) => "Product: {$s}"],
                 $cachePrefix . 'product:*' => ['strip' => null, 'labelFn' => fn($s) => 'Filtered Product Page'],
                 $cachePrefix . 'cart:user:*' => ['strip' => null, 'labelFn' => fn($s) => 'Cart (User #' . preg_replace('/.*:(\d+)$/', '$1', $s) . ')'],
+                $cachePrefix . 'cart:guest:*' => ['strip' => null, 'labelFn' => fn($s) => 'Cart (Guest #' . preg_replace('/.*:([a-zA-Z0-9\-]+)$/', '$1', $s) . ')'],
                 $cachePrefix . 'viewed:user:*' => ['strip' => null, 'labelFn' => fn($s) => 'Recently Viewed (User #' . preg_replace('/.*:(\d+)$/', '$1', $s) . ')'],
+                $cachePrefix . 'viewed:guest:*' => ['strip' => null, 'labelFn' => fn($s) => 'Recently Viewed (Guest #' . preg_replace('/.*:([a-zA-Z0-9\-]+)$/', '$1', $s) . ')'],
             ];
 
             foreach ($patterns as $pattern => $opts) {

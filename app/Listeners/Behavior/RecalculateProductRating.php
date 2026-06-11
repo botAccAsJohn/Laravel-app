@@ -2,6 +2,9 @@
 
 namespace App\Listeners\Behavior;
 
+use Illuminate\Support\Facades\Cache;
+use App\Models\Product;
+
 class RecalculateProductRating
 {
     public function __construct() {}
@@ -18,6 +21,8 @@ class RecalculateProductRating
                 'average_rating' => $average,
                 'review_count' => $count,
             ]);
+
+            app(\App\Services\CacheService::class)->forgetProduct($product->slug);
         }
     }
 }

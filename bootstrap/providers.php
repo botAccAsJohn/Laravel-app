@@ -3,7 +3,7 @@
 return [
     App\Providers\AdminServiceProvider::class,
     App\Providers\AppServiceProvider::class,
-    App\Providers\AuthServiceProvider::class,   // Exercise 50.1 — Gates
+    App\Providers\AuthServiceProvider::class,
     App\Providers\EventServiceProvider::class,
     App\Providers\ObserverServiceProvider::class,
     Resend\Laravel\ResendServiceProvider::class,

@@ -10,5 +10,14 @@ class ProductAddToCart
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public function __construct(public $userId, public $productId, public $quantity) {}
+    /**
+     * @param string $cartKey   Resolved cart key (cart:user:{id} or cart:guest:{uuid})
+     * @param int    $productId
+     * @param int    $quantity
+     */
+    public function __construct(
+        public string $cartKey,
+        public int    $productId,
+        public int    $quantity,
+    ) {}
 }

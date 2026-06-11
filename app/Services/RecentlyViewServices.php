@@ -7,26 +7,39 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 
 class RecentlyViewServices
 {
-    private string $prefix = 'viewed:user:';
+    private string $userPrefix = 'viewed:user:';
+    private string $guestPrefix = 'viewed:guest:';
     private int $limit = 10;
 
-    private function getKey(int $userId): string
+    /**
+     * Resolve the correct Redis recently viewed key for the current request.
+     */
+    public function resolveRecentlyViewedKey(): string
     {
-        return $this->prefix . $userId;
+        if (auth()->check()) {
+            return $this->userPrefix . auth()->id();
+        }
+
+        if (! session()->has('recently_viewed_id')) {
+            session()->put('recently_viewed_id', Str::uuid()->toString());
+        }
+
+        return $this->guestPrefix . session('recently_viewed_id');
     }
 
     // ── Read ──────────────────────────────────────────────────────────────────
 
     /**
-     * Get the list of recently viewed product IDs for a user.
+     * Get the list of recently viewed product IDs for a given key.
      * Returns IDs in order (most recent first).
      */
-    public function get(int $userId): array
+    public function get(string $key): array
     {
-        $raw = Redis::get($this->getKey($userId));
+        $raw = Redis::get($key);
         return $raw ? json_decode($raw, true) : [];
     }
 
@@ -36,9 +49,9 @@ class RecentlyViewServices
      *
      * @return Collection<int, Product>
      */
-    public function getRecentlyViewedModels(int $userId): Collection
+    public function getRecentlyViewedModels(string $key): Collection
     {
-        $ids = $this->get($userId);
+        $ids = $this->get($key);
         if (empty($ids)) {
             return new Collection();
         }
@@ -68,16 +81,16 @@ class RecentlyViewServices
     // ── Write ─────────────────────────────────────────────────────────────────
 
     /**
-     * Record a product view for a user.
+     * Record a product view for a given key.
      * Moves the product to the front if it already exists, and limits the list to $this->limit.
      */
-    public function record(int $userId, int $productId): void
+    public function record(string $key, int $productId): void
     {
-        $ids = $this->get($userId);
+        $ids = $this->get($key);
 
         // Remove if already exists (to move it to the front)
-        if (($key = array_search($productId, $ids)) !== false) {
-            unset($ids[$key]);
+        if (($arrKey = array_search($productId, $ids)) !== false) {
+            unset($ids[$arrKey]);
         }
 
         // Add to the front
@@ -86,26 +99,40 @@ class RecentlyViewServices
         // Limit the size
         $ids = array_slice($ids, 0, $this->limit);
 
-        $this->save($userId, $ids);
+        $this->save($key, $ids);
 
         Log::channel('products')->debug('Product view recorded', [
-            'user_id' => $userId,
+            'recently_viewed_key' => $key,
             'product_id' => $productId,
         ]);
     }
 
     /**
-     * Clear the recently viewed history for a user.
+     * Clear the recently viewed history for a key.
      */
-    public function clear(int $userId): void
+    public function clear(string $key): void
     {
-        Redis::del($this->getKey($userId));
-        Log::channel('products')->info('Recently viewed history cleared', ['user_id' => $userId]);
+        Redis::del($key);
+        Log::channel('products')->info('Recently viewed history cleared', ['recently_viewed_key' => $key]);
     }
 
-    private function save(int $userId, array $ids): void
+    /**
+     * Merge guest recently viewed history into user history.
+     */
+    public function mergeGuestHistory(string $guestKey, string $userKey): void
     {
-        $key = $this->getKey($userId);
+        $guestIds = $this->get($guestKey);
+        $userIds = $this->get($userKey);
+
+        $merged = array_unique(array_merge($guestIds, $userIds));
+        $merged = array_slice($merged, 0, $this->limit);
+
+        $this->save($userKey, $merged);
+        $this->clear($guestKey);
+    }
+
+    private function save(string $key, array $ids): void
+    {
         Redis::set($key, json_encode(array_values($ids)));
         Redis::expire($key, 60 * 60 * 24 * 7); // 7-day TTL
     }

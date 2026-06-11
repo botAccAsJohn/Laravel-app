@@ -5,6 +5,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use App\Http\Middleware\CheckRole;
+use App\Http\Middleware\CheckPermission;
 use App\Http\Middleware\ReqContextMiddleware;
 use App\Http\Middleware\RequirePasswordReset;
 
@@ -15,13 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
         api: __DIR__ . '/../routes/api.php',
         commands: __DIR__ . '/../routes/console.php',
         health: '/up',
-        then: function () {
-            // Register the admin routes with predefined prefix and namespacing
-            Route::middleware('web')
-                ->prefix('admin')
-                ->name('admin.')
-                ->group(base_path('routes/admin.php'));
-        },
+        // Admin routes are now consolidated inside routes/web.php
     )
     ->withEvents(discover: [
         __DIR__ . '/../app/Listeners',
@@ -39,11 +34,13 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->append(\App\Http\Middleware\LogRequestLifecycle::class);
         $middleware->appendToPriorityList(ReqContextMiddleware::class, 'auth');
         $middleware->alias([
-            'api.rate.headers'     => \App\Http\Middleware\ApiRateLimitHeaders::class,
-            'role'                 => CheckRole::class,
-            'slack.verify'         => \App\Http\Middleware\VerifySlackSignature::class,
+            'api.rate.headers' => \App\Http\Middleware\ApiRateLimitHeaders::class,
+            'role' => CheckRole::class,
+            'permission' => CheckPermission::class,
+            'slack.verify' => \App\Http\Middleware\VerifySlackSignature::class,
             'force.password.reset' => RequirePasswordReset::class,
-            'auth.apikey'          => \App\Http\Middleware\AuthenticateApiKey::class, // Exercise 53.3
+            'auth.apikey' => \App\Http\Middleware\AuthenticateApiKey::class, // Exercise 53.3
+            'guest_or_customer' => \App\Http\Middleware\GuestOrCustomer::class,
         ]);
         // ── Redirect unauthenticated users ──────────────────────────────
         // When a guest hits a protected route, send them to the correct login

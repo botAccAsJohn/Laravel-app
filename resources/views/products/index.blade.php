@@ -29,8 +29,7 @@
                 </div>
 
                 <div class="flex items-center gap-3">
-                    @auth
-                    @if(Auth::guard('admin')->check())
+                    @can('create', App\Models\Product::class)
                     <a href="{{ route('products.create') }}"
                         class="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-2xl bg-slate-900 px-8 py-4 text-sm font-bold text-white transition-all hover:bg-slate-800 hover:shadow-2xl hover:shadow-slate-200 active:scale-95">
                         <span class="relative z-10 transition-transform group-hover:-translate-x-1">{{ __('products.add_product') }}</span>
@@ -38,8 +37,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
                         </svg>
                     </a>
-                    @endif
-                    @endauth
+                    @endcan
                 </div>
             </div>
 

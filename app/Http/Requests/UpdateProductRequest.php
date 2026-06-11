@@ -10,12 +10,10 @@ class UpdateProductRequest extends FormRequest
 
     public function authorize(): bool
     {
+        $user = $this->user() ?? $this->user('admin');
         $product = $this->route('product');
 
-        // Admin guard check: $this->user() is null for admin-guard sessions,
-        // so we fall back to the guard check directly.
-        return $this->user()?->can('update', $product)
-            ?? \Illuminate\Support\Facades\Auth::guard('admin')->check();
+        return $user && $user->can('update', $product);
     }
 
     /**

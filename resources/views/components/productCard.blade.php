@@ -92,15 +92,3 @@
     </div>
 </div>
 </div>
-
-
-<!-- <form action="{{ route('cart.add', $product->id) }}" method="POST">
-                    @csrf
-                    <button type="submit"
-                        class="h-12 w-12 flex items-center justify-center bg-slate-900 hover:bg-indigo-600 text-white rounded-2xl shadow-lg transition-all duration-300 hover:rotate-6 active:scale-90 cursor-pointer group/btn"
-                        title="Add to Cart">
-                        <svg class="w-5 h-5 transition-transform group-hover/btn:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
-                        </svg>
-                    </button>
-                </form> -->

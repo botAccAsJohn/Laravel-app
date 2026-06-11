@@ -8,14 +8,11 @@ use App\Observers\{ProductObserver, OrderObserver};
 
 class ObserverServiceProvider extends ServiceProvider
 {
-    /**
-     * Register services.
-     */
-    public function register(): void {}
 
-    /**
-     * Bootstrap services.
-     */
+    public function register(): void
+    {
+    }
+
     public function boot(): void
     {
         Product::observe(ProductObserver::class);

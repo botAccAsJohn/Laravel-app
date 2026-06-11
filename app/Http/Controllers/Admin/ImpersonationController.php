@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\{ImpersonationLog, User};
 use Illuminate\Http\{RedirectResponse, Request};
-use Illuminate\Support\Facades\{Auth, Log};
+use Illuminate\Support\Facades\{Auth, Gate, Log};
 use Illuminate\View\View;
 
 class ImpersonationController extends Controller
@@ -13,7 +13,7 @@ class ImpersonationController extends Controller
 
     public function index(): View
     {
-        abort_unless(Auth::guard('admin')->check(), 403);
+        Gate::authorize('impersonate_users');
 
         $customers = User::orderBy('name')->get(['id', 'name', 'email', 'created_at']);
         $logs = ImpersonationLog::with('targetUser')
@@ -27,7 +27,7 @@ class ImpersonationController extends Controller
     public function impersonate(Request $request, User $user): RedirectResponse
     {
         // ── Gates ─────────────────────────────────────────────────────────
-        abort_unless(Auth::guard('admin')->check(), 403, 'Admin authentication required.');
+        Gate::authorize('impersonate_users');
         abort_if(is_impersonating(), 400, 'Already impersonating a user. Stop the current session first.');
 
         /** @var \App\Models\Admin $admin */

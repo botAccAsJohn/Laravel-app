@@ -12,43 +12,43 @@
 
                 <!-- Navigation Links -->
                 <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                    @can('view-admin-dashboard')
+                    @can('view_admin_dashboard')
                     <x-nav-link :href="route('admin.dashboard')" :active="request()->routeIs('admin.dashboard')">
                         {{ __('common.admin_panel') }}
                     </x-nav-link>
                     @endcan
 
-                    @can('manage-products')
+                    @can('manage_products')
                     <x-nav-link :href="route('products.index')" :active="request()->routeIs('products.*')">
                         {{ __('common.products') }}
                     </x-nav-link>
                     @endcan
 
-                    @can('manage-orders')
+                    @can('manage_orders')
                     <x-nav-link :href="route('orders.index')" :active="request()->routeIs('orders.*')">
                         {{ __('common.orders') }}
                     </x-nav-link>
                     @endcan
 
-                    @can('view-analytics')
+                    @can('view_analytics')
                     <x-nav-link :href="route('admin.analytics.index')" :active="request()->routeIs('admin.analytics.*')">
                         {{ __('admin.sales_analytics') }}
                     </x-nav-link>
                     @endcan
 
-                    @can('manage-reports')
+                    @can('manage_reports')
                     <x-nav-link :href="route('admin.reports.index')" :active="request()->routeIs('admin.reports.*')">
                         {{ __('admin.reports_manager') }}
                     </x-nav-link>
                     @endcan
 
-                    @can('send-admin-alerts')
+                    @can('send_alerts')
                     <x-nav-link :href="route('admin.alerts.index')" :active="request()->routeIs('admin.alerts.*')">
                         Alerts
                     </x-nav-link>
                     @endcan
 
-                    @can('view-logs')
+                    @can('view_logs')
                     <x-nav-link :href="route('admin.logs.index')" :active="request()->routeIs('admin.logs.*')">
                         {{ __('common.logs') }}
                     </x-nav-link>

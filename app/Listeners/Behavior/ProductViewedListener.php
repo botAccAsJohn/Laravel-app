@@ -5,18 +5,17 @@ namespace App\Listeners\Behavior;
 use Illuminate\Support\Facades\Log;
 use App\Services\RecentlyViewServices;
 
-
 class ProductViewedListener
 {
     public function __construct(private RecentlyViewServices $recentlyViewServices) {}
 
     public function handle(object $event): void
     {
-        Log::channel('products')->debug('Product view inside to it ', [
-            'user_id' => $event->userId,
+        Log::channel('products')->debug('Product view event handled', [
+            'recently_viewed_key' => $event->recentlyViewedKey,
             'product_id' => $event->productId,
         ]);
 
-        $this->recentlyViewServices->record($event->userId, $event->productId);
+        $this->recentlyViewServices->record($event->recentlyViewedKey, $event->productId);
     }
 }

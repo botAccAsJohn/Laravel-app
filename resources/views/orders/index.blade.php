@@ -11,7 +11,7 @@
             </div>
 
             <div class="flex items-center gap-3">
-                @if(Auth::guard('admin')->check())
+                @can('view_analytics')
                     <a href="{{ route('orders.analytics') }}"
                         class="inline-flex items-center justify-center bg-white text-indigo-700 border border-indigo-100 px-4 py-2 rounded-lg hover:bg-indigo-50 transition font-bold shadow-sm">
                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -20,7 +20,7 @@
                         </svg>
                         View Order Insights
                     </a>
-                @endif
+                @endcan
             </div>
         </div>
 
@@ -51,11 +51,11 @@
                                     Payment</th>
                                 <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                                     Amount</th>
-                                @if(Auth::guard('admin')->check())
+                                @can('view_analytics')
                                     <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
                                         title="Most recent order total for this customer (correlated subquery)">
                                         Last Order ↓</th>
-                                @endif
+                                @endcan
                                 <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                                     Placed At</th>
                                 <th class="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -99,7 +99,7 @@
                                             @endif
                                         </div>
                                     </td>
-                                    @if(Auth::guard('admin')->check())
+                                    @can('view_analytics')
                                         <td class="px-6 py-4 align-top">
                                             {{-- last_order_amount is a virtual column injected by addSelect() + correlated
                                             subquery in OrderService::getCustomerList(). It is NULL when the order
@@ -113,7 +113,7 @@
                                                 <span class="text-xs text-gray-300">&mdash;</span>
                                             @endif
                                         </td>
-                                    @endif
+                                    @endcan
                                     <td class="px-6 py-4 align-top text-sm text-gray-600">
                                         {{ optional($order->placed_at)->format('d M Y, h:i A') ?? 'Not placed yet' }}
                                     </td>
@@ -124,11 +124,13 @@
                                                 View
                                             </a>
 
-                                            @if(Auth::guard('admin')->check())
+                                            @can('update', $order)
                                                 <a href="{{ route('orders.edit', $order) }}"
                                                     class="bg-yellow-500 text-white px-3 py-1.5 rounded-lg hover:bg-yellow-600 transition whitespace-nowrap">
                                                     Edit
                                                 </a>
+                                            @endcan
+                                            @can('delete', $order)
                                                 <form action="{{ route('orders.destroy', $order) }}" method="POST"
                                                     onsubmit="return confirm('Are you sure you want to delete this order?');"
                                                     class="inline">
@@ -139,7 +141,7 @@
                                                         Delete
                                                     </button>
                                                 </form>
-                                            @endif
+                                            @endcan
 
                                             @if(Auth::id() === $order->user_id && in_array($status, ['pending', 'confirmed']))
                                                 <form action="{{ route('orders.cancel', $order) }}" method="POST"

@@ -56,21 +56,7 @@
     <x-toast />
 
     @auth
-    <script type="module">
-        document.addEventListener('DOMContentLoaded', function() {
-            let presenceRetries = 0;
-
-            function initPresence() {
-                if (window.Echo) {
-                    window.Echo.join('store.browsing');
-                } else if (presenceRetries < 5) {
-                    presenceRetries++;
-                    setTimeout(initPresence, 1000);
-                }
-            }
-            initPresence();
-        });
-    </script>
+        @vite(['resources/js/customer.js'])
     @endauth
 
     @stack('scripts')

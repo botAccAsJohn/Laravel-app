@@ -1,12 +1,13 @@
+<!-- Universal Toast Notifications (Real-Time) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+<script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+
 @auth
 @php
 $isAdmin = Auth::guard('admin')->check();
 $userId = Auth::id();
 @endphp
 
-<!-- Universal Toast Notifications (Real-Time) -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
-<script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
 <script type="module">
     document.addEventListener('DOMContentLoaded', function() {
         setTimeout(() => {

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Order;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
 
@@ -10,13 +11,9 @@ class StoreOrderRequest extends FormRequest
 
     public function authorize(): bool
     {
-        // Admin guard users (e.g. admin testing checkout directly, not impersonating) — always pass.
-        if (Auth::guard('admin')->check() && !is_impersonating()) {
-            return true;
-        }
+        $user = $this->user() ?? $this->user('admin');
 
-        // Web-authenticated customers must have the 'place_order' permission.
-        return Auth::check() && Auth::user()->can('place_order');
+        return $user && $user->can('create', Order::class);
     }
 
     public function rules(): array

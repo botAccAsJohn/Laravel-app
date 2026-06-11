@@ -20,8 +20,9 @@ class SendCartAbandonedEmailListener implements ShouldQueue
      */
     public function handle(object $event): void
     {
-        // Hydrate full models to get images and other details
-        $cartModels = $this->cartService->getCartModels($event->user->id);
+        // Abandoned-cart emails are always for authenticated users — build their key directly
+        $cartKey    = 'cart:user:' . $event->user->id;
+        $cartModels = $this->cartService->getCartModels($cartKey);
 
         Mail::to($event->user->email)->send(
             new SendCartAbandonedEmail(

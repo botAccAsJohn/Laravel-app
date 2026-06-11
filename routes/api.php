@@ -6,21 +6,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\{Route, DB, Log, File, Http, URL, Mail};
 use App\Http\Controllers\Api\{AuthController, TokenController, ApiKeyController};
 
-// Exercise 47.4: Tier-based rate limiting for authenticated users
 Route::middleware(['auth:sanctum', 'throttle:api-tiered'])->group(function () {
     Route::get('/download', function () {
-        // Get all files in the 'products' directory inside 'public'
         $files = File::files(storage_path('app\public\products'));
-
-        // Check if there are any files
         if (empty($files)) {
             abort(404, 'No files found in the products folder.');
         }
-
-        // Get the first file from the array
         $firstFile = $files[0]->getPathname();
-
-        // Return the file as a download response
         return response()->download($firstFile, 'img.png');
     });
 
@@ -95,6 +87,7 @@ Route::middleware(['throttle:api', 'api.rate.headers'])->group(function () {
         ]);
     });
 
+    // generate the signed url
     Route::get('/generate-link/{id}', function ($id) {
         return URL::temporarySignedRoute(
             'unsubscribe',              // route name
@@ -103,12 +96,17 @@ Route::middleware(['throttle:api', 'api.rate.headers'])->group(function () {
         );
     });
 
+    // validate the above signed urls
     Route::get('/unsubscribe/{user}', function (Request $request, $user) {
         if (!$request->hasValidSignature()) {
             abort(403, 'Invalid or expired link');
         }
         return "User {$user} unsubscribed successfully";
     })->name('unsubscribe');
+
+
+
+    //need to chake this one 
 
     // ── Exercise 54.3: Encrypted Payloads (alternative to Signed URLs) ─────
     Route::get('/generate-encrypted-link/{id}', function ($id) {

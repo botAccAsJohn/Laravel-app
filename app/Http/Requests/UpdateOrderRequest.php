@@ -10,10 +10,10 @@ class UpdateOrderRequest extends FormRequest
 
     public function authorize(): bool
     {
+        $user = $this->user() ?? $this->user('admin');
         $order = $this->route('order');
 
-        return $this->user()?->can('update', $order)
-            ?? \Illuminate\Support\Facades\Auth::guard('admin')->check();
+        return $user && $user->can('update', $order);
     }
 
     public function rules(): array

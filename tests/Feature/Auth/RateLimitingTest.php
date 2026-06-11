@@ -55,8 +55,6 @@ test('login is throttled after 5 attempts and logs to security channel', functio
     expect($service->failureCount($email))->toBe(5);
 
     // Confirm that the failures were logged to security channel
-    ]);
-
     $response->assertStatus(302);
     $response->assertSessionHasErrors('email');
 
@@ -64,6 +62,6 @@ test('login is throttled after 5 attempts and logs to security channel', functio
     $logPath = storage_path('logs/security.log');
     expect(File::exists($logPath))->toBeTrue();
     $logContent = File::get($logPath);
-    expect($logContent)->toContain('Rate limit hit: password-reset');
+    expect($logContent)->toContain('Rate limit hit: login');
     expect($logContent)->toContain($email);
 });

@@ -5,13 +5,15 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\{RedirectResponse, Request};
-use Illuminate\Support\Facades\{Auth, DB, Hash, Log, Mail, Password};
+use Illuminate\Support\Facades\{Auth, DB, Gate, Hash, Log, Mail, Password};
 
 
 class ForcePasswordResetController extends Controller
 {
     public function __invoke(Request $request, User $user): RedirectResponse
     {
+        Gate::authorize('manage_users');
+
         $request->validate([
             'reason' => ['nullable', 'string', 'max:500'],
         ]);

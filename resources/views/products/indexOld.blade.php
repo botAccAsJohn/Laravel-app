@@ -20,15 +20,14 @@
                     @if(isset($is_search) && $is_search)
                         Found <span class="text-slate-900 font-bold underline decoration-indigo-500/30 decoration-4 underline-offset-4">{{ $total_products ?? 0 }}</span> matching items
                     @else
-                        Curated collection of <span class="text-slate-900 font-bold underline decoration-indigo-500/30 decoration-4 underline-offset-4">{{ $all_products_count }}</span> items
+                        Curated collection of <span class="text-slate-900 font-bold underline decoration-indigo-500/30 decoration-4 underline-offset-4">{{ $total_products }}</span> items
                     @endif
                 </p>
             </div>
         </div>
 
         <div class="flex items-center gap-3">
-            @auth
-            @if(Auth::user()->role === 'admin')
+            @can('create', App\Models\Product::class)
             <a href="{{ route('products.create') }}"
                 class="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-2xl bg-slate-900 px-8 py-4 text-sm font-bold text-white transition-all hover:bg-slate-800 hover:shadow-2xl hover:shadow-slate-200 active:scale-95">
                 <span class="relative z-10">Initialize New Product</span>
@@ -36,8 +35,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
                 </svg>
             </a>
-            @endif
-            @endauth
+            @endcan
         </div>
     </div>
 
@@ -112,7 +110,7 @@
                 </div>
                 @endforelse
             </div>
-            {{ $products->withQueryString()->links() }}
+            {{ $products->links() }}
         </div>
     </div>
 

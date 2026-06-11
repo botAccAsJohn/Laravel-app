@@ -62,12 +62,17 @@ class ManualAuthController extends Controller
         // listeners can respond if needed.
         event(new Registered($user));
 
+        $guestCartId = $request->session()->get('cart_id');
+        $guestViewedId = $request->session()->get('recently_viewed_id');
+
         // Directly log in with the new User model instance.
         Auth::login($user);
 
         // ⚠ Critical: regenerate prevents session-fixation attacks.
         // (See conceptual explanation in docs below.)
         $request->session()->regenerate();
+
+        $this->mergeGuestData($guestCartId, $guestViewedId, $user->id);
 
         Log::info('[ManualAuth] New customer registered', [
             'user_id' => $user->id,
@@ -124,6 +129,9 @@ class ManualAuthController extends Controller
             }
         }
 
+        $guestCartId = $request->session()->get('cart_id');
+        $guestViewedId = $request->session()->get('recently_viewed_id');
+
         if (! Auth::attempt($credentials, $remember)) {
             // Account-based counter: warning email at 5, CAPTCHA at 10
             $service->recordFailure($email, $request->ip(), $request->userAgent() ?? '');
@@ -135,6 +143,8 @@ class ManualAuthController extends Controller
 
         // ⚠ CRITICAL — regenerate the session ID on every successful login.
         $request->session()->regenerate();
+
+        $this->mergeGuestData($guestCartId, $guestViewedId, Auth::id());
 
         // Clear both counters on success.
         $service->recordSuccess($email, $request->ip(), Auth::id());
@@ -328,6 +338,9 @@ class ManualAuthController extends Controller
             abort(403, 'This magic link has expired or is invalid.');
         }
 
+        $guestCartId = $request->session()->get('cart_id');
+        $guestViewedId = $request->session()->get('recently_viewed_id');
+
         // Authenticate and start a session.
         $user = Auth::loginUsingId($userId);
 
@@ -337,6 +350,8 @@ class ManualAuthController extends Controller
 
         $request->session()->regenerate();
 
+        $this->mergeGuestData($guestCartId, $guestViewedId, $user->id);
+
         Log::info('[ManualAuth] Magic link login via admin generated link', [
             'user_id' => $user->id,
             'email'   => $user->email,
@@ -345,5 +360,21 @@ class ManualAuthController extends Controller
 
         return redirect()->route('products.index')
             ->with('success', "Signed in via magic link as {$user->name}.");
+    }
+
+    /**
+     * Merge guest cart and recently viewed history to the logged-in user.
+     */
+    private function mergeGuestData(?string $guestCartId, ?string $guestViewedId, int $userId): void
+    {
+        if ($guestCartId) {
+            app(\App\Services\CartService::class)->mergeGuestCart('cart:guest:' . $guestCartId, $userId);
+        }
+
+        if ($guestViewedId) {
+            $guestViewedKey = 'viewed:guest:' . $guestViewedId;
+            $userViewedKey = 'viewed:user:' . $userId;
+            app(\App\Services\RecentlyViewServices::class)->mergeGuestHistory($guestViewedKey, $userViewedKey);
+        }
     }
 }

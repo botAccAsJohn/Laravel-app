@@ -10,5 +10,9 @@ class ProductViewed
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public function __construct(public $productId, public $userId) {}
+    /**
+     * @param int    $productId
+     * @param string $recentlyViewedKey
+     */
+    public function __construct(public int $productId, public string $recentlyViewedKey) {}
 }

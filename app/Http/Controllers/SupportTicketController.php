@@ -11,6 +11,14 @@ use Illuminate\Support\Facades\Auth;
 class SupportTicketController extends Controller
 {
     /**
+     * Show the form for creating a new support ticket.
+     */
+    public function create()
+    {
+        return view('support.create');
+    }
+
+    /**
      * Store a newly created support ticket.
      */
     public function store(Request $request)

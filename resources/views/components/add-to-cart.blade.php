@@ -4,7 +4,7 @@ use Livewire\Component;
 use App\Models\Product;
 use App\Events\Behavior\ProductAddToCart;
 use App\Exceptions\ProductOutOfStockException;
-use Illuminate\Support\Facades\Auth;
+use App\Services\CartService;
 
 new class extends Component
 {
@@ -12,16 +12,13 @@ new class extends Component
 
     public function addToCart()
     {
-        if (!Auth::check()) {
-            return redirect()->route('login');
-        }
-
-        $userId = Auth::id();
+        $cartService = app(CartService::class);
+        $cartKey   = $cartService->resolveCartKey();
         $productId = $this->product->id;
-        $quantity = 1;
+        $quantity  = 1;
 
         try {
-            event(new ProductAddToCart($userId, $productId, $quantity));
+            event(new ProductAddToCart($cartKey, $productId, $quantity));
             $this->js("
                 Toastify({
                     text: '✅ Added to cart successfully',

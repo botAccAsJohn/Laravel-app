@@ -7,6 +7,7 @@ use App\Jobs\DispatchProductImportBatch;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Throwable;
@@ -18,6 +19,7 @@ class ProductImportController extends Controller
      */
     public function showForm()
     {
+        Gate::authorize('import_products');
         return view('admin.import.form');
     }
 
@@ -27,6 +29,8 @@ class ProductImportController extends Controller
      */
     public function import(Request $request)
     {
+        Gate::authorize('import_products');
+
         $request->validate([
             'csv_file' => 'required|file|mimes:csv,txt|max:20480', // 20MB max
         ]);
@@ -56,6 +60,8 @@ class ProductImportController extends Controller
      */
     public function pollBatchId(string $batchCacheKey)
     {
+        Gate::authorize('import_products');
+
         $data = Cache::get($batchCacheKey);
 
         if (!$data) {
@@ -77,6 +83,8 @@ class ProductImportController extends Controller
      */
     public function progress(string $batchId)
     {
+        Gate::authorize('import_products');
+
         $batch = Bus::findBatch($batchId);
 
         if (!$batch) {
@@ -91,6 +99,8 @@ class ProductImportController extends Controller
      */
     public function getProgress(string $batchId)
     {
+        Gate::authorize('import_products');
+
         $batch = Bus::findBatch($batchId);
 
         if (!$batch) {
@@ -118,6 +128,8 @@ class ProductImportController extends Controller
      */
     public function cancel(string $batchId)
     {
+        Gate::authorize('import_products');
+
         $batch = Bus::findBatch($batchId);
 
         if (!$batch) {

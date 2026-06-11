@@ -13,13 +13,13 @@ class AdminAlertController extends Controller
 {
     public function index(): View
     {
-        Gate::authorize('send-admin-alerts');
+        Gate::authorize('send_alerts');
         return view('admin.alerts.create');
     }
 
     public function store(StoreAdminAlertRequest $request): RedirectResponse
     {
-        Gate::authorize('send-admin-alerts');
+        Gate::authorize('send_alerts');
         $validated = $request->validated();
 
         Notification::route('mail', $validated['email'])

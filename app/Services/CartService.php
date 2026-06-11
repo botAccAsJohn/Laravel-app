@@ -6,25 +6,50 @@ use App\Exceptions\ProductOutOfStockException;
 use App\Models\Product;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\{Log, Redis, Cache};
+use Illuminate\Support\Str;
 
 class CartService
 {
-    private string $prefix = 'cart:user:';
-    private string $remindedPrefix = 'cart:reminded:user:';
+    private string $userPrefix  = 'cart:user:';
+    private string $guestPrefix = 'cart:guest:';
 
-    // ── Redis key ─────────────────────────────────────────────────────────────
+    // ── Cart-key resolution ────────────────────────────────────────────────────
 
-    private function getKey(int $userId): string
+    /**
+     * Resolve the correct Redis cart key for the current request:
+     *   - Authenticated customer → cart:user:{id}
+     *   - Guest                  → cart:guest:{uuid}  (UUID stored in session)
+     *
+     * Call this once in the controller action and pass the result to every
+     * service method so we never read session/auth twice per request.
+     */
+    public function resolveCartKey(): string
     {
-        return $this->prefix . $userId;
+        if (auth()->check()) {
+            return $this->userPrefix . auth()->id();
+        }
+
+        if (! session()->has('cart_id')) {
+            session()->put('cart_id', Str::uuid()->toString());
+        }
+
+        return $this->guestPrefix . session('cart_id');
     }
+
+    /**
+     * Whether the given key belongs to a guest cart.
+     */
+    public function isGuestKey(string $cartKey): bool
+    {
+        return str_starts_with($cartKey, $this->guestPrefix);
+    }
+
+    // ── Reminder cooldown (auth users only) ────────────────────────────────────
 
     private function getRemindedKey(int $userId): string
     {
-        return $this->remindedPrefix . $userId;
+        return 'cart:reminded:user:' . $userId;
     }
-
-    // ── Reminder cooldown ─────────────────────────────────────────────────────
 
     /**
      * Check if a reminder was already sent to this user within the cooldown period.
@@ -46,37 +71,33 @@ class CartService
     // ── Read ──────────────────────────────────────────────────────────────────
 
     /**
-     * Return all cart items stored in Redis for a user.
+     * Return all cart items stored in Redis for the given cart key.
      * Each item: ['id', 'name', 'price', 'quantity']
+     *
+     * @param  string $cartKey  Resolved via resolveCartKey()
      */
-    public function get(int $userId): array
+    public function get(string $cartKey): array
     {
-        $raw = Redis::get($this->getKey($userId));
+        $raw = Redis::get($cartKey);
         return $raw ? json_decode($raw, true) : [];
     }
 
     /**
-     * Scan Redis and return all active carts.
+     * Scan Redis and return all active *user* carts (guest carts are excluded —
+     * they have no associated email to remind).
      * Returns an array keyed by user_id => cart items array.
      * Uses SCAN (non-blocking) instead of KEYS for production safety.
-     *
-     * Laravel's Redis facade automatically prepends a prefix (e.g. "session:")
-     * to every key. SCAN returns the FULL key including that prefix, so:
-     *   - pattern must use a leading wildcard: *cart:user:*
-     *   - GET must use the plain key (without prefix) so Laravel doesn't double-prefix
-     *   - user ID is always the last segment after the final ":"
      *
      * @return array<int, array>
      */
     public function findAllCarts(): array
     {
-        // Use *prefix* so the scan matches regardless of the Redis key prefix
-        $pattern = '*' . $this->prefix . '*';
-        $carts = [];
-        $cursor = '0';
+        // Match only authenticated-user carts
+        $pattern = '*' . $this->userPrefix . '*';
+        $carts   = [];
+        $cursor  = '0';
 
         do {
-            // SCAN returns [nextCursor, [fullKeys]] — keys include the Redis prefix
             [$cursor, $keys] = Redis::scan($cursor, ['match' => $pattern, 'count' => 100]);
 
             foreach ($keys as $fullKey) {
@@ -88,10 +109,8 @@ class CartService
                 }
 
                 // Strip the auto-prefix so Redis::get() doesn't double-prefix.
-                // e.g. "session:cart:user:42" → "cart:user:42"
-                // Redis::get("cart:user:42") will internally look up "session:cart:user:42"
-                $plainKey = substr($fullKey, strpos($fullKey, $this->prefix));
-                $raw = Redis::get($plainKey);
+                $plainKey = substr($fullKey, strpos($fullKey, $this->userPrefix));
+                $raw      = Redis::get($plainKey);
 
                 if ($raw) {
                     $carts[$userId] = json_decode($raw, true);
@@ -105,21 +124,21 @@ class CartService
     /**
      * Hydrate full Eloquent models for every item currently in the cart.
      * Keyed by product ID so blade templates can do $cartModels[$item['id']].
-     * Falls back to a DB query when the products cache is cold.
      *
+     * @param  string $cartKey
      * @return Collection<int, Product>
      */
-    public function getCartModels(int $userId): Collection
+    public function getCartModels(string $cartKey): Collection
     {
-        $cart = $this->get($userId);
-        $ids = array_column($cart, 'id');
+        $cart = $this->get($cartKey);
+        $ids  = array_column($cart, 'id');
 
         if (empty($ids)) {
             return new Collection();
         }
 
         // Try warm cache first
-        $cached = Cache::get(Product::CACHE_KEY_ALL);
+        $cached = \App\Services\CacheService::getAllProductsFromCache();
         if ($cached) {
             return new Collection(
                 $cached->filter(fn($p) => in_array($p->id, $ids))->keyBy('id')
@@ -132,13 +151,13 @@ class CartService
 
     /**
      * Calculate the grand total using the effective price per item.
-     * Accepts pre-fetched $cart and $models to avoid redundant reads.
-     * When called without arguments it fetches them itself.
+     *
+     * @param  string $cartKey
      */
-    public function total(int $userId): float
+    public function total(string $cartKey): float
     {
-        $cart = $this->get($userId);
-        $models = $this->getCartModels($userId);
+        $cart   = $this->get($cartKey);
+        $models = $this->getCartModels($cartKey);
 
         return $this->calcTotal($cart, $models);
     }
@@ -157,7 +176,7 @@ class CartService
                 continue;
             }
 
-            $model = $models[$productId] ?? null;
+            $model          = $models[$productId] ?? null;
             $effectivePrice = $model && $model->discount_price
                 ? (float) $model->discount_price
                 : (float) $item['price'];
@@ -174,13 +193,14 @@ class CartService
      * Add a product to the cart (or increment its quantity).
      * Resolves the product from the cache first, DB second.
      *
-     * @throws ProductOutOfStockException  When the product is not found.
+     * @param  string $cartKey
+     * @throws ProductOutOfStockException  When the product is not found or out of stock.
      */
-    public function add(int $userId, int $productId, int $quantity = 1): void // Product
+    public function add(string $cartKey, int $productId, int $quantity = 1): void
     {
         $product = $this->findProduct($productId);
 
-        if (!$product) {
+        if (! $product) {
             throw new ProductOutOfStockException(
                 productName: "Product #{$productId}",
                 productId: $productId,
@@ -189,11 +209,10 @@ class CartService
             );
         }
 
-        $cart = $this->get($userId);
-        $currentQuantityInCart = isset($cart[$productId]) ? $cart[$productId]['quantity'] : 0;
-        $totalRequestedQuantity = $currentQuantityInCart + $quantity;
+        $cart                    = $this->get($cartKey);
+        $currentQuantityInCart   = isset($cart[$productId]) ? $cart[$productId]['quantity'] : 0;
+        $totalRequestedQuantity  = $currentQuantityInCart + $quantity;
 
-        // Check if the total requested quantity exceeds available stock
         if ($totalRequestedQuantity > $product->quantity) {
             throw new ProductOutOfStockException(
                 productName: $product->name,
@@ -207,84 +226,88 @@ class CartService
             $cart[$productId]['quantity'] = $totalRequestedQuantity;
         } else {
             $cart[$productId] = [
-                'id' => $product->id,
-                'name' => $product->name,
-                'price' => $product->price,
+                'id'       => $product->id,
+                'name'     => $product->name,
+                'price'    => $product->price,
                 'quantity' => $quantity,
-                // No per-item timestamp — _last_activity_at on the cart level handles this
             ];
         }
 
-        $this->save($userId, $cart);
+        $this->save($cartKey, $cart);
 
         Log::channel('cart')->info('Item added to cart', [
-            'user_id' => $userId,
+            'cart_key'   => $cartKey,
             'product_id' => $product->id,
-            'name' => $product->name,
-            'quantity' => $cart[$productId]['quantity'],
+            'name'       => $product->name,
+            'quantity'   => $cart[$productId]['quantity'],
         ]);
-
-        // return $product;
     }
 
     /**
      * Remove a single item from the cart entirely.
+     *
+     * @param string $cartKey
      */
-    public function remove(int $userId, int $productId): void
+    public function remove(string $cartKey, int $productId): void
     {
-        $cart = $this->get($userId);
+        $cart = $this->get($cartKey);
 
         if (isset($cart[$productId])) {
             $name = $cart[$productId]['name'] ?? "Product #{$productId}";
             unset($cart[$productId]);
-            $this->save($userId, $cart);
+            $this->save($cartKey, $cart);
 
             Log::channel('cart')->info('Item removed from cart', [
-                'user_id' => $userId,
+                'cart_key'   => $cartKey,
                 'product_id' => $productId,
-                'name' => $name,
+                'name'       => $name,
             ]);
         }
     }
 
     /**
      * Decrement quantity by 1; remove the item entirely when quantity reaches 0.
+     *
+     * @param string $cartKey
      */
-    public function decrement(int $userId, int $productId): void
+    public function decrement(string $cartKey, int $productId): void
     {
-        $cart = $this->get($userId);
+        $cart = $this->get($cartKey);
 
-        if (!isset($cart[$productId])) {
+        if (! isset($cart[$productId])) {
             return; // item not in cart — nothing to do
         }
 
         if ($cart[$productId]['quantity'] > 1) {
             $cart[$productId]['quantity']--;
-            $this->save($userId, $cart);
+            $this->save($cartKey, $cart);
 
             Log::channel('cart')->debug('Item quantity decremented', [
-                'user_id' => $userId,
-                'product_id' => $productId,
+                'cart_key'    => $cartKey,
+                'product_id'  => $productId,
                 'new_quantity' => $cart[$productId]['quantity'],
             ]);
         } else {
-            $this->remove($userId, $productId);
+            $this->remove($cartKey, $productId);
         }
     }
 
     /**
      * Set an item's quantity explicitly; removes item when $quantity <= 0.
+     *
+     * @param string $cartKey
+     * @throws ProductOutOfStockException
      */
-    public function updateQuantity(int $userId, int $productId, int $quantity): void
+    public function updateQuantity(string $cartKey, int $productId, int $quantity): void
     {
         if ($quantity <= 0) {
-            $this->remove($userId, $productId);
+            $this->remove($cartKey, $productId);
             return;
         }
 
         $product = $this->findProduct($productId);
 
-        if (!$product || $quantity > $product->quantity) {
+        if (! $product || $quantity > $product->quantity) {
             throw new ProductOutOfStockException(
                 productName: $product ? $product->name : "Product #{$productId}",
                 productId: $productId,
@@ -293,50 +316,94 @@ class CartService
             );
         }
 
-        $cart = $this->get($userId);
+        $cart = $this->get($cartKey);
+
         if (isset($cart[$productId])) {
             $cart[$productId]['quantity'] = $quantity;
-            $this->save($userId, $cart);
+            $this->save($cartKey, $cart);
 
             Log::channel('cart')->debug('Item quantity updated', [
-                'user_id' => $userId,
+                'cart_key'   => $cartKey,
                 'product_id' => $productId,
-                'quantity' => $quantity,
+                'quantity'   => $quantity,
             ]);
         }
     }
 
     /**
-     * Remove all items from the user's cart.
+     * Remove all items from the cart.
+     *
+     * @param string $cartKey
      */
-    public function clear(int $userId): void
+    public function clear(string $cartKey): void
     {
-        Redis::del($this->getKey($userId));
+        Redis::del($cartKey);
 
-        Log::channel('cart')->info('Cart cleared', ['user_id' => $userId]);
+        Log::channel('cart')->info('Cart cleared', ['cart_key' => $cartKey]);
     }
 
     /**
      * Store an applied coupon code in the cart metadata.
+     *
+     * @param string $cartKey
      */
-    public function applyCoupon(int $userId, ?string $couponCode): void
+    public function applyCoupon(string $cartKey, ?string $couponCode): void
     {
-        $cart = $this->get($userId);
+        $cart = $this->get($cartKey);
+
         if ($couponCode) {
             $cart['_applied_coupon'] = $couponCode;
         } else {
             unset($cart['_applied_coupon']);
         }
-        $this->save($userId, $cart);
+
+        $this->save($cartKey, $cart);
     }
 
     /**
      * Retrieve the applied coupon code from the cart metadata.
+     *
+     * @param string $cartKey
      */
-    public function getAppliedCoupon(int $userId): ?string
+    public function getAppliedCoupon(string $cartKey): ?string
     {
-        $cart = $this->get($userId);
+        $cart = $this->get($cartKey);
         return $cart['_applied_coupon'] ?? null;
+    }
+
+    /**
+     * Merge a guest cart into an authenticated user's cart after login.
+     * Called from a login listener or post-login hook.
+     * Deletes the guest cart once merged.
+     */
+    public function mergeGuestCart(string $guestCartKey, int $userId): void
+    {
+        if (! $this->isGuestKey($guestCartKey)) {
+            return;
+        }
+
+        $guestCart = $this->get($guestCartKey);
+        $userKey   = $this->userPrefix . $userId;
+
+        foreach ($guestCart as $productId => $item) {
+            if (is_string($productId) && str_starts_with($productId, '_')) {
+                continue; // skip metadata
+            }
+
+            try {
+                $this->add($userKey, (int) $productId, $item['quantity']);
+            } catch (ProductOutOfStockException) {
+                // Silently skip out-of-stock items during merge
+            }
+        }
+
+        // Clean up the guest cart
+        Redis::del($guestCartKey);
+
+        Log::channel('cart')->info('Guest cart merged into user cart', [
+            'guest_key' => $guestCartKey,
+            'user_id'   => $userId,
+        ]);
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────
@@ -346,7 +413,7 @@ class CartService
      */
     private function findProduct(int $productId): ?Product
     {
-        $cached = Cache::get(Product::CACHE_KEY_ALL);
+        $cached = \App\Services\CacheService::getAllProductsFromCache();
         if ($cached) {
             $found = $cached->firstWhere('id', $productId);
             if ($found) {
@@ -354,18 +421,17 @@ class CartService
             }
         }
 
-        // Cache is cold — fall back to a direct DB lookup
         return Product::find($productId);
     }
 
-    private function save(int $userId, array $cart): void
+    /**
+     * Persist the cart to Redis with a 30-day TTL.
+     */
+    private function save(string $cartKey, array $cart): void
     {
-        // Stamp a single cart-level timestamp each time the cart is written.
-        // The command uses this to detect inactivity — no per-item timestamps needed.
         $cart['_last_activity_at'] = now()->timestamp;
 
-        $key = $this->getKey($userId);
-        Redis::set($key, json_encode($cart));
-        Redis::expire($key, 60 * 60 * 24 * 30); // 30-day TTL
+        Redis::set($cartKey, json_encode($cart));
+        Redis::expire($cartKey, 60 * 60 * 24 * 30); // 30-day TTL
     }
 }

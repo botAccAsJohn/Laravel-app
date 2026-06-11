@@ -1,6 +1,6 @@
-import Echo from 'laravel-echo';
+import Echo from "laravel-echo";
 
-import Pusher from 'pusher-js';
+import Pusher from "pusher-js";
 window.Pusher = Pusher;
 
 window.Echo = new Echo({
@@ -10,26 +10,41 @@ window.Echo = new Echo({
     forceTLS: true,
 });
 
-const userId = document.querySelector('meta[name="user-id"]')?.getAttribute('content');
-const userRole = document.querySelector('meta[name="user-role"]')?.getAttribute('content');
+const userId = document
+    .querySelector('meta[name="user-id"]')
+    ?.getAttribute("content");
+const userRole = document
+    .querySelector('meta[name="user-role"]')
+    ?.getAttribute("content");
 
 if (userId) {
-    window.Echo.private(`App.Models.User.${userId}`)
-        .notification((notification) => {
+    window.Echo.private(`App.Models.User.${userId}`).notification(
+        (notification) => {
             console.log("User Notification:", notification);
             const type = notification.type || "info";
             const title = notification.title || "New notification";
             const message = notification.message || "";
             window.notify(type, title, message, 6000);
             bumpBadge();
-        });
+        },
+    );
 
-    window.Echo.private('admin.orders')
-        .listen('.order.placed', (e) => {
+    window.Echo.private("admin.orders")
+        .listen(".order.placed", (e) => {
             // Align with NewOrderReceived toBroadcast payload
-            window.notify('success', e.title || 'New Order!', e.message || `Order #${e.orderId} by ${e.customerName}`, 10000);
+            window.notify(
+                "success",
+                e.title || "New Order!",
+                e.message || `Order #${e.orderId} by ${e.customerName}`,
+                10000,
+            );
         })
-        .listen('.status.updated', (e) => {
-            window.notify('info', 'Status Updated', `Order #${e.order_id} is now ${e.label}`, 6000);
+        .listen(".status.updated", (e) => {
+            window.notify(
+                "info",
+                "Status Updated",
+                `Order #${e.order_id} is now ${e.label}`,
+                6000,
+            );
         });
 }

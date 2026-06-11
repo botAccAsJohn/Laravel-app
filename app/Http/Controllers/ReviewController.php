@@ -8,9 +8,11 @@ use App\Models\{Product, Review};
 use App\Events\Behavior\ProductReviewed;
 use Illuminate\Http\{RedirectResponse, Request};
 use Illuminate\Support\Facades\{Auth, RateLimiter, Log};
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class ReviewController extends Controller
 {
+    use AuthorizesRequests;
     /**
      * Store a newly created review in storage.
      */

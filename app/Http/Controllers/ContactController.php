@@ -9,9 +9,17 @@ use Illuminate\Support\Facades\Log;
 class ContactController extends Controller
 {
     /**
+     * Show the contact form view.
+     */
+    public function create()
+    {
+        return view('contact.create');
+    }
+
+    /**
      * Handle contact form submission.
      */
-    public function submit(Request $request)
+    public function store(Request $request)
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',

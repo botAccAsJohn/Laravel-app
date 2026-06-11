@@ -8,12 +8,12 @@ class ProductCollection extends Collection
 {
     public function inStock(): self
     {
-        return $this->filter(fn($product) => $product->quantity > 0);
+        return $this->filter(fn($product) => $product->quantity > 0)->values();
     }
 
     public function byPriceRange(float $min, float $max): self
     {
-        return $this->filter(fn($product) => $product->price >= $min && $product->price <= $max);
+        return $this->filter(fn($product) => $product->price >= $min && $product->price <= $max)->values();
     }
 
     public function featured(): self
@@ -21,7 +21,7 @@ class ProductCollection extends Collection
         return $this->filter(function ($product) {
             $tags = is_array($product->tags) ? $product->tags : [];
             return in_array('featured', $tags);
-        });
+        })->values();
     }
 
     public function onSale(): self
@@ -31,11 +31,12 @@ class ProductCollection extends Collection
 
     public function totalValue(): float
     {
-        return (float) $this->sum(fn($product) => $product->quantity * $product->price);
+        return $this->sum(fn($product) => $product->discount_price ?? $product->price * $product->stock);
     }
 
     public function lowStock(int $threshold = 10): self
     {
         return $this->filter(fn($product) => $product->quantity <= $threshold);
     }
+
 }

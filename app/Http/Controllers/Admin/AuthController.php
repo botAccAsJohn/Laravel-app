@@ -23,7 +23,7 @@ class AuthController extends Controller
      */
     public function dashboard(\App\Services\CacheMonitorService $monitor): View
     {
-        Gate::authorize('view-admin-dashboard');
+        Gate::authorize('view_admin_dashboard');
         $stats = $monitor->stats();
         return view('admin.dashboard', compact('stats'));
     }

@@ -16,7 +16,7 @@ class SalesAnalyticsController extends Controller
 
     public function export()
     {
-        Gate::authorize('view-analytics');
+        Gate::authorize('view_analytics');
         $orders = Order::with('user')
             ->whereNotIn('status', ['cancelled', 'refunded'])
             ->whereNull('orders.deleted_at')
@@ -32,7 +32,7 @@ class SalesAnalyticsController extends Controller
 
     public function index(Request $request)
     {
-        Gate::authorize('view-analytics');
+        Gate::authorize('view_analytics');
 
         $filterYear = $request->input('year');
         $filterMonth = $request->input('month');

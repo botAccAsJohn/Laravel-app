@@ -8,29 +8,30 @@ use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\{Event, Gate, URL, Log, RateLimiter, Blade, View, Auth, Response, DB, Http, Mail, Schema};
 use App\Auth\RedisUserProvider;
-use App\Models\{Permission, User};
+use App\Models\{Admin, Permission, Product, Review, User};
 use Illuminate\Pagination\Paginator;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Auth\Notifications\{VerifyEmail, ResetPassword};
 use Carbon\Carbon;
+use Illuminate\Contracts\Support\DeferrableProvider;
 
-class AppServiceProvider extends ServiceProvider
+class AppServiceProvider extends ServiceProvider //implements DeferrableProvider
 {
     public function register(): void
     {
         Log::info('[STEP 2b] AppServiceProvider register() called');
-        $this->app->singleton(AIService::class, function () {
-            return new AIService();
-        });
-        $this->app->bind(OrderService::class, function ($app) {
-            return new OrderService($app->make(CartService::class));
-        });
-        $this->app->singleton(ExternalApiService::class, function () {
-            return new ExternalApiService();
-        });
-        // Exercise 49.4 — account-based brute-force protection service
+
+        $this->app->singleton(ExternalApiService::class);
+
         $this->app->singleton(LoginThrottleService::class);
     }
+    // public function provides(): array
+    // {
+    //     return [
+    //         ExternalApiService::class,
+    //         LoginThrottleService::class,
+    //     ];
+    // }
 
     public function boot(): void
     {
@@ -67,7 +68,7 @@ class AppServiceProvider extends ServiceProvider
 
         ResetPassword::toMailUsing(function (object $notifiable, string $token) {
             $locale = $notifiable->preferred_locale ?? app()->getLocale();
-            $name   = $notifiable->name ?? $notifiable->email;
+            $name = $notifiable->name ?? $notifiable->email;
 
             $url = url(route('password.reset', [
                 'token' => $token,
@@ -79,23 +80,11 @@ class AppServiceProvider extends ServiceProvider
                 ->html(
                     view('email.password-reset', [
                         'resetUrl' => $url,
-                        'name'     => $name,
-                        'locale'   => $locale,
+                        'name' => $name,
+                        'locale' => $locale,
                     ])->render()
                 );
         });
-
-        if (Schema::hasTable('permissions')) {
-            Permission::all()->each(function (Permission $permission) {
-                Gate::define($permission->name, function ($user) use ($permission) {
-                    if ($user instanceof \App\Models\Admin) {
-                        return true;
-                    }
-
-                    return method_exists($user, 'hasPermission') ? $user->hasPermission($permission->name) : false;
-                });
-            });
-        }
 
         RateLimiter::for('api', function (\Illuminate\Http\Request $request) {
             return \Illuminate\Cache\RateLimiting\Limit::perMinute(60)
@@ -221,9 +210,9 @@ class AppServiceProvider extends ServiceProvider
 
             $limit = match ($tier) {
                 'enterprise' => \Illuminate\Cache\RateLimiting\Limit::perMinute(6000)->by($key),
-                'pro'        => \Illuminate\Cache\RateLimiting\Limit::perMinute(600)->by($key),
-                'free'       => \Illuminate\Cache\RateLimiting\Limit::perMinute(60)->by($key),
-                default      => \Illuminate\Cache\RateLimiting\Limit::perMinute(60)->by($key),
+                'pro' => \Illuminate\Cache\RateLimiting\Limit::perMinute(600)->by($key),
+                'free' => \Illuminate\Cache\RateLimiting\Limit::perMinute(60)->by($key),
+                default => \Illuminate\Cache\RateLimiting\Limit::perMinute(60)->by($key),
             };
 
             return $limit->response(function (\Illuminate\Http\Request $request, array $headers) use ($tier) {

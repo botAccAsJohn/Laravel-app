@@ -15,52 +15,64 @@
         </div>
         <div class="flex flex-wrap items-center gap-3">
             {{-- Import Products Link --}}
+            @can('import_products')
             <a href="{{ route('admin.import.form') }}" class="flex items-center gap-2 group px-4 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl font-bold text-xs transition-all border border-emerald-100 shadow-sm">
                 <svg class="w-4 h-4 text-emerald-500 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l4-4m0 0l4 4m-4-4v12" />
                 </svg>
                 Import Products
             </a>
+            @endcan
 
             {{-- Export Products Link --}}
+            @can('manage_products')
             <a href="{{ route('admin.products.export') }}" class="flex items-center gap-2 group px-4 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl font-bold text-xs transition-all border border-blue-100 shadow-sm">
                 <svg class="w-4 h-4 text-blue-500 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                 </svg>
                 Export Products
             </a>
+            @endcan
 
             {{-- Sales Analytics Link --}}
+            @can('view_analytics')
             <a href="{{ route('admin.analytics.index') }}" class="flex items-center gap-2 group px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl font-bold text-xs transition-all border border-indigo-100 shadow-sm">
                 <svg class="w-4 h-4 text-indigo-500 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                 </svg>
                 {{ __('admin.sales_analytics') }}
             </a>
+            @endcan
 
             {{-- Reports Manager --}}
+            @can('manage_reports')
             <a href="{{ route('admin.reports.index') }}" class="flex items-center gap-2 group px-4 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-xl font-bold text-xs transition-all border border-amber-100 shadow-sm">
                 <svg class="w-4 h-4 text-amber-500 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2a4 4 0 10-8 0v2m8-2v2m-4-1h4m1-7V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
                 {{ __('admin.reports_manager') }}
             </a>
+            @endcan
 
             {{-- Alerts Link --}}
+            @can('send_alerts')
             <a href="{{ route('admin.alerts.index') }}" class="flex items-center gap-2 group px-4 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl font-bold text-xs transition-all border border-rose-100 shadow-sm">
                 <svg class="w-4 h-4 text-rose-500 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                 </svg>
                 Alerts
             </a>
+            @endcan
 
             {{-- Roles & Permissions --}}
+            @can('manage_users')
             <a href="{{ route('admin.roles.index') }}" class="flex items-center gap-2 group px-4 py-2.5 bg-violet-50 hover:bg-violet-100 text-violet-700 rounded-xl font-bold text-xs transition-all border border-violet-100 shadow-sm">
                 <svg class="w-4 h-4 text-violet-500 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                 </svg>
                 Roles & Permissions
             </a>
+            @endcan
         </div>
     </div>
 
@@ -150,6 +162,7 @@
                         </div>
                     </div>
 
+                    @can('manage_products')
                     <div class="pt-4 border-t border-gray-100">
                         <form method="POST" action="{{ route('admin.cache.clear') }}">
                             @csrf
@@ -161,6 +174,7 @@
                             </button>
                         </form>
                     </div>
+                    @endcan
                 </div>
             </div>
 
@@ -176,7 +190,11 @@
                     <span id="active-browsers-count" class="px-2.5 py-0.5 bg-indigo-100 text-indigo-700 text-xs font-black rounded-full">0</span>
                 </div>
                 <div class="p-4">
-                    <ul id="active-browsers-list" class="space-y-3 max-h-[300px] overflow-y-auto">
+                    <ul id="active-browsers-list" 
+                        data-admin-id="{{ Auth::guard('admin')->id() }}" 
+                        data-trans-active-now="{{ __('admin.active_now') }}" 
+                        data-trans-no-users="{{ __('admin.no_users_active') }}"
+                        class="space-y-3 max-h-[300px] overflow-y-auto">
                         <li id="no-browsers-msg" class="text-xs text-center py-6 text-gray-400 font-medium italic">
                             {{ __('admin.no_users_active') }}
                         </li>
@@ -200,7 +218,7 @@
                     </div>
                 </div>
 
-                <div id="orders-feed" class="p-8 space-y-4 min-h-[200px] max-h-[400px] overflow-y-auto">
+                <div id="orders-feed" data-currency="{{ config('app.currency') }}" class="p-8 space-y-4 min-h-[200px] max-h-[400px] overflow-y-auto">
                     <div id="no-orders-msg" class="flex flex-col items-center justify-center py-10 text-center">
                         <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
                             <svg class="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -272,127 +290,5 @@
 @push('scripts')
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
 <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
-<script type="module">
-    document.addEventListener('DOMContentLoaded', function() {
-        setTimeout(() => {
-            if (window.Echo) {
-                window.Echo.private('admin.orders')
-                    .listen('.order.placed', function(data) {
-                        console.log('New order received:', data);
-                        addOrderToFeed(data);
-                        Toastify({
-                            text: `✨ NEW ORDER RECEIVED\n#${data.orderId} by ${data.customerName}\nValue: {{ config('app.currency') }} ${parseFloat(data.orderTotal).toFixed(2)}`,
-                            duration: 8000,
-                            gravity: 'top',
-                            position: 'right',
-                            stopOnFocus: true,
-                            style: {
-                                background: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)",
-                                borderRadius: "16px",
-                                borderLeft: "4px solid #6366f1",
-                                padding: "20px 24px",
-                                fontSize: "14px",
-                                fontWeight: "600",
-                                color: "#f8fafc",
-                                whiteSpace: "pre-line",
-                                cursor: "pointer"
-                            },
-                            onClick: function() {
-                                window.location.href = `/orders/${data.orderId}`;
-                            }
-                        }).showToast();
-                    });
-
-                // Presence Channel Tracking
-                let activeUsers = [];
-                window.Echo.join('store.browsing')
-                    .here((users) => {
-                        activeUsers = users;
-                        updateBrowsersUI();
-                    })
-                    .joining((user) => {
-                        activeUsers.push(user);
-                        updateBrowsersUI();
-                    })
-                    .leaving((user) => {
-                        activeUsers = activeUsers.filter(u => u.id !== user.id);
-                        updateBrowsersUI();
-                    });
-
-                function updateBrowsersUI() {
-                    const countEl = document.getElementById('active-browsers-count');
-                    const listEl = document.getElementById('active-browsers-list');
-                    const currentUserId = {{ Auth::guard('admin')->id() ?? 'null' }};
-
-                    if (countEl) countEl.textContent = activeUsers.length;
-                    if (!listEl) return;
-
-                    const others = activeUsers.filter(u => u.id !== currentUserId);
-
-                    if (others.length === 0) {
-                        listEl.innerHTML = '<li id="no-browsers-msg" class="text-xs text-center py-6 text-gray-400 font-medium italic">{{ __('admin.no_users_active') }}</li>';
-                        return;
-                    }
-
-                    listEl.innerHTML = others.map(u => `
-                        <li class="flex flex-col gap-1 p-3 rounded-xl hover:bg-gray-50 transition-all border border-transparent hover:border-indigo-50 group">
-                            <div class="flex items-center gap-3">
-                                <div class="h-8 w-8 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center text-[10px] font-bold uppercase transition-transform group-hover:rotate-12">
-                                    ${u.name.charAt(0)}
-                                </div>
-                                <div class="flex-1 min-w-0">
-                                    <p class="text-sm font-black text-gray-900 truncate">${u.name}</p>
-                                    <div class="flex items-center gap-1.5">
-                                        <span class="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                                        <span class="text-[9px] text-emerald-600 font-black uppercase tracking-widest">{{ __('admin.active_now') }}</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="mt-2 pl-11">
-                                <div class="flex items-center gap-1.5 px-2 py-1 bg-gray-100 rounded-md border border-gray-200/50">
-                                    <svg class="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                    </svg>
-                                    <span class="text-[10px] font-mono text-gray-500 truncate" title="${u.path}">${u.path}</span>
-                                </div>
-                            </div>
-                        </li>
-                    `).join('');
-                }
-            }
-        }, 500);
-
-        function addOrderToFeed(data) {
-            const feed = document.getElementById('orders-feed');
-            const emptyMsg = document.getElementById('no-orders-msg');
-            if (!feed) return;
-            if (emptyMsg) emptyMsg.remove();
-
-            const item = document.createElement('div');
-            item.className = 'group bg-white border border-gray-100 p-5 rounded-2xl hover:border-indigo-100 hover:bg-gray-50/50 transition-all duration-500 flex justify-between items-center opacity-0 translate-y-[-20px] shadow-sm hover:shadow-md';
-            item.innerHTML = `
-                <div class="flex items-center gap-4">
-                    <div class="h-12 w-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center font-bold">
-                        #${String(data.orderId).slice(-2)}
-                    </div>
-                    <div>
-                        <p class="font-black text-gray-900 group-hover:text-indigo-600 transition-colors">${data.customerName}</p>
-                        <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">${data.itemsCount} Products | Total {{ config('app.currency') }}${data.orderTotal}</p>
-                    </div>
-                </div>
-                <div class="flex items-center gap-3">
-                    <span class="px-3 py-1 bg-amber-50 text-amber-600 text-[10px] font-black uppercase tracking-widest rounded-full border border-amber-100">Pending</span>
-                    <a href="/orders/${data.orderId}" class="p-2 bg-gray-50 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                        </svg>
-                    </a>
-                </div>
-            `;
-            feed.prepend(item);
-            setTimeout(() => item.classList.remove('opacity-0', 'translate-y-[-20px]'), 50);
-        }
-    });
-</script>
+@vite(['resources/js/broadcast.js', 'resources/js/browsing.js'])
 @endpush

@@ -1,16 +1,31 @@
 <?php
 
-use App\Http\Controllers\{ProfileController, Product2Controller, CacheMonitorController, CartController, OrderController, RecentlyViewController, ReviewController, LocaleController, NotificationController};
+use App\Http\Controllers\{ProfileController, ProductController, CacheMonitorController, CartController, OrderController, RecentlyViewController, ReviewController, LocaleController, NotificationController, DeviceController, SupportTicketController, ContactController};
 use App\Http\Controllers\Auth\ManualAuthController;
+use App\Http\Controllers\Admin\{
+    AuthController,
+    UserRoleController,
+    RoleController,
+    ReportManagerController,
+    SalesAnalyticsController,
+    AdminAlertController,
+    ProductImportController,
+    ForcePasswordResetController,
+    ImpersonationController,
+};
 use Illuminate\Support\Facades\{Route, Auth};
+use Illuminate\Foundation\Auth\EmailVerificationRequest;
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  PUBLIC ROUTES (no auth required)
+// ═══════════════════════════════════════════════════════════════════════════
 
 Route::post('/locale', [LocaleController::class, 'switch'])->name('locale.switch');
 
-// Admin routes are defined in routes/admin.php (loaded by bootstrap/app.php)
-
 Route::get('/', function () {
-    return view('welcome');
-})->name('welcome');
+    return redirect()->route('products.index');
+});
 
 Route::get('/dashboard', function () {
     if (Auth::guard('admin')->check() && !is_impersonating()) {
@@ -19,94 +34,91 @@ Route::get('/dashboard', function () {
     return redirect()->route('products.index');
 })->name('dashboard');
 
+// ── Contact (public) ─────────────────────────────────────────────────────
+Route::get('/contact', [ContactController::class, 'index'])->name('contact.index');
+Route::post('/contact', [ContactController::class, 'submit'])->name('contact.submit');
+
+// ── Support Tickets (public) ─────────────────────────────────────────────
+Route::prefix('support')->name('support.')->group(function () {
+    Route::get('/tickets/create', [SupportTicketController::class, 'create'])->name('tickets.create');
+    Route::post('/tickets', [SupportTicketController::class, 'store'])->name('tickets.store');
+});
+
+// ── Products (public) ────────────────────────────────────────────────────
+Route::get('/products', [ProductController::class, 'index'])->name('products.index');
+Route::get('/products/{product}', [ProductController::class, 'show'])->name('products.show');
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  AUTHENTICATED ROUTES (any logged-in user — admin or customer)
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── Profile (any authenticated user) ────────────────────────────────────
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->middleware('verified')->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-    // Exercise 49.5 — log out all other devices / sessions
+
     Route::delete('/profile/other-devices', [ProfileController::class, 'logoutOtherDevices'])
         ->name('profile.logout-other-devices');
-});
 
-Route::middleware(['auth:web,admin', 'verified'])->group(function () {
-    Route::resource('products', Product2Controller::class)->only(['index', 'show']);
-
-    // ── Order Routes (Shared — accessible by both web and admin guards) ─────────
-    // IMPORTANT: Static segments (/orders/create, /orders/analytics) MUST be
-    // registered BEFORE Route::resource() which generates the wildcard pattern
-    // GET /orders/{order}. Laravel matches routes top-to-bottom; if the resource
-    // is registered first, "create" and "analytics" are treated as {order} IDs,
-    // the model binding fails, and a 404 is returned before reaching the controller.
-
-    // Static named routes first ─────────────────────────────────────────────────
-    Route::get('/orders', [OrderController::class, 'index'])->middleware('verified')->name('orders.index');
-    Route::get('/orders/create', [OrderController::class, 'create'])->middleware('verified')->name('orders.create');
-    Route::post('/orders', [OrderController::class, 'store'])->middleware(['throttle:checkout', 'verified'])->name('orders.store');
-    Route::get('/orders/analytics', [OrderController::class, 'analytics'])->name('orders.analytics');
-    Route::post('/orders/coupon/validate', [OrderController::class, 'validateCoupon'])->name('coupon.validate');
-    Route::post('/orders/coupon/remove', [OrderController::class, 'removeCoupon'])->name('coupon.remove');
-
-    // Wildcard resource routes after all static segments ────────────────────────
-    Route::resource('orders', OrderController::class)->except(['index', 'create', 'store']);
-    Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
-    Route::get('/invoices/{order}/download', [OrderController::class, 'invoice'])->name('invoices.download');
-});
-
-Route::middleware(['auth:web'])->group(function () {
-    // ── Device / Token Management (Exercise 49.2) ───────────
-    Route::get('/profile/devices', [\App\Http\Controllers\DeviceController::class, 'index'])->name('devices.index');
-    Route::delete('/profile/devices/{id}', [\App\Http\Controllers\DeviceController::class, 'revoke'])->name('devices.revoke');
-    Route::delete('/profile/devices', [\App\Http\Controllers\DeviceController::class, 'revokeAll'])->name('devices.revokeAll');
-
-    // Cart Routes
-    Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
-    Route::post('/cart/add/{productId}', [CartController::class, 'add'])->name('cart.add');
-    Route::post('/cart/decrement/{productId}', [CartController::class, 'decrement'])->name('cart.decrement');
-    Route::post('/cart/remove/{productId}', [CartController::class, 'remove'])->name('cart.remove');
-    Route::post('/cart/clear', [CartController::class, 'clear'])->name('cart.clear');
-
-    // Coupon Routes are in the auth:web,admin group above (alongside all other order routes)
-
-    // Recently Viewed Routes
-    Route::get('/recently-viewed', [RecentlyViewController::class, 'index'])->name('recently.index');
-    Route::post('/recently-viewed/clear', [RecentlyViewController::class, 'clear'])->name('recently.clear');
-
-    // orders.create and orders.store moved to auth:web,admin group above
-    // so they work for both web users and admin-guard users.
-
-    // Reviews Routes (Exercise 50.2 — ReviewPolicy enforces 24h edit window)
-    Route::post('/products/{product}/reviews', [ReviewController::class, 'store'])->name('reviews.store');
-    Route::patch('/reviews/{review}', [ReviewController::class, 'update'])->name('reviews.update');
-    Route::delete('/reviews/{review}', [ReviewController::class, 'destroy'])->name('reviews.destroy');
-
-    // Notifications Routes
+    // Notification Routes ────────────────────────────────────────────────
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::get('/notifications/unread', [NotificationController::class, 'unread'])->name('notifications.unread');
     Route::get('/notifications/{id}', [NotificationController::class, 'show'])->name('notifications.show');
     Route::post('/notifications/mark-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.markAllAsRead');
     Route::patch('/notifications/{id}/read', [NotificationController::class, 'update'])->name('notifications.markAsRead');
-
-    // Support Ticket Submission (Exercise 47.3)
-    Route::post('/support-tickets', [\App\Http\Controllers\SupportTicketController::class, 'store'])->name('support-tickets.store');
 });
 
-Route::post('/contact', [\App\Http\Controllers\ContactController::class, 'submit'])->name('contact.submit');
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  CUSTOMER ROUTES (role:customer)
+// ═══════════════════════════════════════════════════════════════════════════
+
+Route::middleware(['auth:web', 'role:customer'])->group(function () {
+
+    // ── Verified Customer Routes ────────────────────────────────────────
+    Route::middleware('verified')->group(function () {
+
+        // Order Routes (permission: place_order) ─────────────────────────
+        Route::middleware(['permission:place_order'])->group(function () {
+            Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+            Route::get('/orders/create', [OrderController::class, 'create'])->name('orders.create');
+            Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+            Route::post('/orders', [OrderController::class, 'store'])->middleware(['throttle:checkout'])->name('orders.store');
+            Route::post('/orders/coupon/validate', [OrderController::class, 'validateCoupon'])->name('coupon.validate');
+            Route::post('/orders/coupon/remove', [OrderController::class, 'removeCoupon'])->name('coupon.remove');
+            Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
+            Route::get('/invoices/{order}/download', [OrderController::class, 'invoice'])->name('invoices.download');
+        });
+
+        // Review Routes ──────────────────────────────────────────────────
+        Route::post('/products/{product}/reviews', [ReviewController::class, 'store'])->name('reviews.store');
+        Route::patch('/reviews/{review}', [ReviewController::class, 'update'])->name('reviews.update');
+        Route::delete('/reviews/{review}', [ReviewController::class, 'destroy'])->name('reviews.destroy');
+    });
+
+    // ── Customer Device / Token Management (no verification needed) ─────
+    Route::get('/profile/devices', [DeviceController::class, 'index'])->name('devices.index');
+    Route::delete('/profile/devices/{id}', [DeviceController::class, 'revoke'])->name('devices.revoke');
+    Route::delete('/profile/devices', [DeviceController::class, 'revokeAll'])->name('devices.revokeAll');
+});
+
+// ── Guest or Customer ────────────────────────────────────────────────────
+Route::middleware('guest_or_customer')->group(function () {
+    Route::get('/recently-viewed', [RecentlyViewController::class, 'index'])->name('recently.index');
+    Route::post('/recently-viewed/clear', [RecentlyViewController::class, 'clear'])->name('recently.clear');
+});
 
 
-
-// Route::get('/test-slack', function () {
-//     $order = \App\Models\Order::find(2);
-//     dump($order);
-//     \Illuminate\Support\Facades\Notification::send(\App\Models\User::find(2), new \App\Notifications\NewOrderReceived($order));
-//     dump("here !!");
-//     return "Notification sent successfully.....ssd";
-// });
-
+// ═══════════════════════════════════════════════════════════════════════════
+//  AUTH SCAFFOLDING
+// ═══════════════════════════════════════════════════════════════════════════
 
 require __DIR__ . '/auth.php';
+require __DIR__ . '/cart.php';
 
-// ── Exercise 49.3 — Manual Authentication Routes ────────────────────────
-// Guest-only: custom login & register forms (separate from Breeze routes)
+// ── Manual Authentication (customer) — Guest only ───────────────────────
 Route::middleware('guest')->prefix('manual-auth')->name('manual-auth.')->group(function () {
     Route::get('register', [ManualAuthController::class, 'showRegister'])->name('register');
     Route::post('register', [ManualAuthController::class, 'register'])->name('register.store');
@@ -115,32 +127,112 @@ Route::middleware('guest')->prefix('manual-auth')->name('manual-auth.')->group(f
     Route::post('login', [ManualAuthController::class, 'login'])
         ->middleware('throttle:login')
         ->name('login.store');
-
 });
 
-// Authenticated customer: logout (own session)
+// ── Manual Authentication (customer) — Logout ───────────────────────────
 Route::middleware('auth:web')->prefix('manual-auth')->name('manual-auth.')->group(function () {
     Route::post('logout', [ManualAuthController::class, 'logout'])->name('logout');
 });
 
-// Signed magic-link login (no auth required — the signed URL is the proof)
+// ── Signed magic-link login ──────────────────────────────────────────────
 Route::get('magic-login/{userId}', [ManualAuthController::class, 'magicLinkLogin'])->name('magic.login');
 
-use Illuminate\Foundation\Auth\EmailVerificationRequest;
 
-// Show "please verify" notice
-Route::get('/email/verify', function () {
-    return view('auth.verify-email');
-})->middleware('auth')->name('verification.notice');
+// ═══════════════════════════════════════════════════════════════════════════
+//  ADMIN ROUTES (permission-based access control)
+// ═══════════════════════════════════════════════════════════════════════════
 
-// Handle signed link click
-Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $request) {
-    $request->fulfill();
-    return redirect('/dashboard?verified=1');
-})->middleware(['auth', 'signed'])->name('verification.verify');
+// ── Admin Guest (login page — only accessible when NOT logged in as admin)
+Route::middleware('guest:admin')->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
+    Route::post('/login', [AuthController::class, 'login'])
+        ->name('login.store')
+        ->middleware('throttle:login');
+});
 
-// Resend link
-Route::post('/email/verification-notification', function (\Illuminate\Http\Request $request) {
-    $request->user()->sendEmailVerificationNotification();
-    return back()->with('message', 'Verification link sent!');
-})->middleware(['auth', 'throttle:6,1'])->name('verification.send');
+// ── Product Management (permission: manage_products — named without admin. prefix)
+Route::middleware(['auth:admin', 'verified', 'role:admin', 'permission:manage_products'])
+    ->prefix('admin')
+    ->group(function () {
+        Route::get('products/export', [ProductController::class, 'exportProducts'])->name('products.export');
+        Route::resource('products', ProductController::class)->except(['index', 'show']);
+    });
+
+// ── Authenticated Admin ──────────────────────────────────────────────────
+// Base middleware: auth:admin + verified + role:admin
+// Each sub-group adds a granular permission check.
+Route::middleware(['auth:admin', 'verified', 'role:admin'])
+    ->prefix('admin')
+    ->name('admin.')
+    ->group(function () {
+
+        // ── Dashboard & Logout (all admins) ──────────────────────────────
+        Route::get('dashboard', [AuthController::class, 'dashboard'])->name('dashboard');
+        Route::post('logout', [AuthController::class, 'logout'])->name('logout');
+
+        // ── Product Import (permission: import_products) ─────────────────
+        Route::middleware(['permission:import_products'])->group(function () {
+            Route::get('import', [ProductImportController::class, 'showForm'])->name('import.form');
+            Route::post('import', [ProductImportController::class, 'import'])->name('import.process');
+            Route::get('import/queued/{batchCacheKey}/poll', [ProductImportController::class, 'pollBatchId'])->name('import.poll');
+            Route::get('import/progress/{batchId}', [ProductImportController::class, 'progress'])->name('import.progress');
+            Route::get('import/progress/{batchId}/status', [ProductImportController::class, 'getProgress'])->name('import.progress.status');
+            Route::post('import/progress/{batchId}/cancel', [ProductImportController::class, 'cancel'])->name('import.cancel');
+        });
+
+        // ── Order Management (permission: manage_orders) ─────────────────
+        Route::middleware(['permission:manage_orders'])->group(function () {
+            // (Reserved for future admin order management routes)
+        });
+
+        // ── Activity Logs (permission: view_logs) ────────────────────────
+        Route::middleware(['permission:view_logs'])->group(function () {
+            Route::get('/logs', [ProductController::class, 'logs'])->name('logs.index');
+        });
+
+        // ── Cache Monitor (permission: manage_products) ──────────────────
+        Route::middleware(['permission:manage_products'])->group(function () {
+            Route::get('cache', [CacheMonitorController::class, 'index'])->name('cache.index');
+            Route::post('cache/clear', [CacheMonitorController::class, 'clear'])->name('cache.clear');
+        });
+
+        // ── Sales Analytics (permission: view_analytics) ─────────────────
+        Route::middleware(['permission:view_analytics'])->group(function () {
+            Route::get('analytics', [SalesAnalyticsController::class, 'index'])->name('analytics.index');
+            Route::get('analytics/export', [SalesAnalyticsController::class, 'export'])->name('analytics.export');
+        });
+
+        // ── Reports Manager (permission: manage_reports) ─────────────────
+        Route::middleware(['permission:manage_reports'])->group(function () {
+            Route::get('reports', [ReportManagerController::class, 'index'])->name('reports.index');
+            Route::post('reports/archive', [ReportManagerController::class, 'archive'])->name('reports.archive');
+            Route::post('reports/cleanup', [ReportManagerController::class, 'bulkCleanup'])->name('reports.cleanup');
+        });
+
+        // ── Admin Alerts (permission: send_alerts) ───────────────────────
+        Route::middleware(['permission:send_alerts'])->group(function () {
+            Route::get('alerts', [AdminAlertController::class, 'index'])->name('alerts.index');
+            Route::post('alerts', [AdminAlertController::class, 'store'])->name('alerts.store');
+        });
+
+        // ── Impersonation (permission: impersonate_users) ────────────────
+        Route::middleware(['permission:impersonate_users'])->group(function () {
+            Route::get('impersonate', [ImpersonationController::class, 'index'])->name('impersonate.index');
+            Route::post('impersonate/stop', [ImpersonationController::class, 'stopImpersonating'])->name('impersonate.stop');
+            Route::post('impersonate/{user}', [ImpersonationController::class, 'impersonate'])->name('impersonate.start');
+        });
+
+        // ── User & Role Management (permission: manage_users) ────────────
+        Route::middleware(['permission:manage_users'])->group(function () {
+            Route::get('users', [UserRoleController::class, 'index'])->name('users.index');
+            Route::get('users/{user}/roles', [UserRoleController::class, 'edit'])->name('users.edit-roles');
+            Route::patch('users/{user}/roles', [UserRoleController::class, 'update'])->name('users.update-roles');
+            Route::post('users/{user}/roles/assign', [UserRoleController::class, 'assignRole'])->name('users.assign-role');
+            Route::delete('users/{user}/roles/revoke', [UserRoleController::class, 'revokeRole'])->name('users.revoke-role');
+            Route::post('users/{user}/magic-link', [UserRoleController::class, 'generateMagicLink'])->name('users.magic-link');
+
+            // Role CRUD
+            Route::resource('roles', RoleController::class)->except(['show']);
+            Route::post('users/{user}/force-reset', ForcePasswordResetController::class)->name('users.force-reset');
+        });
+    });

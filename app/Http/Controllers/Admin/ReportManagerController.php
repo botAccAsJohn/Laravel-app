@@ -11,7 +11,7 @@ class ReportManagerController extends Controller
 {
     public function index()
     {
-        Gate::authorize('manage-reports');
+        Gate::authorize('manage_reports');
         $disk = Storage::disk('reports');
         $files = $disk->files();
 
@@ -30,7 +30,7 @@ class ReportManagerController extends Controller
 
     public function archive(Request $request)
     {
-        Gate::authorize('manage-reports');
+        Gate::authorize('manage_reports');
         $file = $request->input('file');
         $disk = Storage::disk('reports');
 
@@ -48,7 +48,7 @@ class ReportManagerController extends Controller
 
     public function bulkCleanup()
     {
-        Gate::authorize('manage-reports');
+        Gate::authorize('manage_reports');
         $disk = Storage::disk('reports');
         $files = $disk->files();
 

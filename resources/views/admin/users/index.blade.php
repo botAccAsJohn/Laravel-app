@@ -143,12 +143,14 @@
                                     </button>
                                 </form>
 
+                                @can('impersonate_users')
                                 <form method="POST" action="{{ route('admin.impersonate.start', $user) }}">
                                     @csrf
                                     <button type="submit" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 font-medium">
                                         Impersonate
                                     </button>
                                 </form>
+                                @endcan
 
                                 <form method="POST"
                                       action="{{ route('admin.users.force-reset', $user) }}"

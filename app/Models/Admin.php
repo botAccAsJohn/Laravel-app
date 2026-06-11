@@ -61,6 +61,14 @@ class Admin extends Authenticatable implements HasLocalePreference
         return $this->preferred_locale ?? config('app.locale');
     }
 
+    /**
+     * Check if the user is an admin (always true for Admin).
+     */
+    public function getIsAdminAttribute(): bool
+    {
+        return true;
+    }
+
     protected static function booted(): void
     {
         static::updated(function (Admin $admin) {

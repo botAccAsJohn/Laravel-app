@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Services\RecentlyViewServices;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
 class RecentlyViewController extends Controller
@@ -16,7 +15,8 @@ class RecentlyViewController extends Controller
      */
     public function index(): View
     {
-        $products = $this->service->getRecentlyViewedModels(Auth::id());
+        $key = $this->service->resolveRecentlyViewedKey();
+        $products = $this->service->getRecentlyViewedModels($key);
 
         return view('recently.index', [
             'products'   => $products,
@@ -29,7 +29,8 @@ class RecentlyViewController extends Controller
      */
     public function clear(Request $request)
     {
-        $this->service->clear(Auth::id());
+        $key = $this->service->resolveRecentlyViewedKey();
+        $this->service->clear($key);
 
         return redirect()->route('recently.index')->with('success', 'Recently viewed history cleared.');
     }
@@ -39,9 +40,8 @@ class RecentlyViewController extends Controller
      */
     public function add(int $productId)
     {
-        if (Auth::check()) {
-            $this->service->record(Auth::id(), $productId);
-        }
+        $key = $this->service->resolveRecentlyViewedKey();
+        $this->service->record($key, $productId);
 
         return response()->json(['success' => true]);
     }

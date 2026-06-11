@@ -29,7 +29,7 @@ class UpdateInventoryListener implements ShouldQueue
                 broadcast(new \App\Events\ProductStockChanged($model->id, $model->fresh()->quantity));
 
                 // Clear the cache for this product since quantity changed
-                \Illuminate\Support\Facades\Cache::forget(\App\Models\Product::CACHE_KEY_SINGLE . $model->slug);
+                app(\App\Services\CacheService::class)->forgetProduct($model->slug);
             }
         }
     }

@@ -4,7 +4,6 @@ use Livewire\Component;
 use App\Services\CartService;
 use App\Events\Behavior\ProductAddToCart;
 use App\Exceptions\ProductOutOfStockException;
-use Illuminate\Support\Facades\Auth;
 
 use Livewire\Attributes\Computed;
 
@@ -13,24 +12,25 @@ new class extends Component
     #[Computed]
     public function cartData()
     {
-        $userId = Auth::id();
         $cartService = app(CartService::class);
-        $rawCart = $cartService->get($userId) ?? [];
+        $cartKey = $cartService->resolveCartKey();
+        $rawCart = $cartService->get($cartKey) ?? [];
 
         // Filter out metadata keys starting with _ to avoid errors in loops
         $cart = array_filter($rawCart, fn($k) => !str_starts_with($k, '_'), ARRAY_FILTER_USE_KEY);
 
         return [
             'cart'       => $cart,
-            'cartModels' => $cartService->getCartModels($userId) ?? [],
-            'total'      => $cartService->total($userId) ?? 0,
+            'cartModels' => $cartService->getCartModels($cartKey) ?? [],
+            'total'      => $cartService->total($cartKey) ?? 0,
         ];
     }
 
     public function increment($productId)
     {
+        $cartKey = app(CartService::class)->resolveCartKey();
         try {
-            event(new ProductAddToCart(Auth::id(), $productId, 1));
+            event(new ProductAddToCart($cartKey, (int) $productId, 1));
             $this->showToast('✅ ' . __('cart.toast_qty_increased'), 'success');
         } catch (ProductOutOfStockException) {
             $this->showToast('❌ ' . __('cart.toast_out_of_stock'), 'error');
@@ -39,19 +39,22 @@ new class extends Component
 
     public function decrement($productId)
     {
-        app(CartService::class)->decrement(Auth::id(), $productId);
+        $cartService = app(CartService::class);
+        $cartService->decrement($cartService->resolveCartKey(), (int) $productId);
         $this->showToast('✅ ' . __('cart.toast_qty_decreased'), 'success');
     }
 
     public function remove($productId)
     {
-        app(CartService::class)->remove(Auth::id(), $productId);
+        $cartService = app(CartService::class);
+        $cartService->remove($cartService->resolveCartKey(), (int) $productId);
         $this->showToast('🗑️ ' . __('cart.toast_removed'), 'success');
     }
 
     public function clear()
     {
-        app(CartService::class)->clear(Auth::id());
+        $cartService = app(CartService::class);
+        $cartService->clear($cartService->resolveCartKey());
         $this->showToast('🗑️ ' . __('cart.toast_cleared'), 'success');
     }
 

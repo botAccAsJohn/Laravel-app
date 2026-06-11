@@ -11,10 +11,9 @@ class StoreProductRequest extends FormRequest
 
     public function authorize(): bool
     {
-        // $this->user() gives the web-guard user (null for guests/admins).
-        // Passing Product::class (not an instance) resolves to the "create" method.
-        return $this->user()?->can('create', Product::class)
-            ?? \Illuminate\Support\Facades\Auth::guard('admin')->check();
+        $user = current_user();//$this->user() ?? $this->user('admin');
+
+        return $user && $user->can('create', Product::class);
     }
 
     /**
