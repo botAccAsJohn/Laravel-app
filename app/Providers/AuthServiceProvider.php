@@ -2,7 +2,7 @@
 
 namespace App\Providers;
 
-use App\Models\{Admin, Permission, Product, Review, User};
+use App\Models\{Admin, Order, Permission, Product, Review, User};
 use Illuminate\Support\Facades\{Auth, Gate, Log, Schema};
 use Illuminate\Support\ServiceProvider;
 use App\Policies\{OrderPolicy, ProductPolicy, ReviewPolicy, UserPolicy};
@@ -43,29 +43,25 @@ class AuthServiceProvider extends ServiceProvider
                 }
             }
 
-            if ($user instanceof User && $user->role === 'super-admin') {
-                return true;
-            }
 
             return null;
         });
 
         Gate::policy(Product::class, ProductPolicy::class);
         Gate::policy(Order::class, OrderPolicy::class);
-        Gate::policy(ProductReview::class, ReviewPolicy::class);
-        // Gate::policy(User::class, UserPolicy::class);
-        // Gate::policy(Admin::class, ProfilePolicy::class);
+        Gate::policy(Review::class, ReviewPolicy::class);
+        Gate::policy(User::class, UserPolicy::class);
 
         // ── Static Gate definitions ──
-        Gate::define('view_admin_dashboard', fn (User|Admin $user) => $user->is_admin);
-        Gate::define('manage_products', fn (User|Admin $user) => $user->is_admin);
-        Gate::define('manage_orders', fn (User|Admin $user) => $user->is_admin);
-        Gate::define('impersonate_users', fn (User|Admin $user) => $user->is_admin);
-        Gate::define('view_analytics', fn (User|Admin $user) => $user->is_admin);
+        Gate::define('view_admin_dashboard', fn (User|Admin $user) => is_admin());
+        Gate::define('manage_products', fn (User|Admin $user) => is_admin());
+        Gate::define('manage_orders', fn (User|Admin $user) => is_admin());
+        Gate::define('impersonate_users', fn (User|Admin $user) => is_admin());
+        Gate::define('view_analytics', fn (User|Admin $user) => is_admin());
 
-        Gate::define('manage_reports', fn (User|Admin $user) => $user->is_admin);
-        Gate::define('view_logs', fn (User|Admin $user) => $user->is_admin);
-        Gate::define('send_alerts', fn (User|Admin $user) => $user->is_admin);
+        Gate::define('manage_reports', fn (User|Admin $user) => is_admin());
+        Gate::define('view_logs', fn (User|Admin $user) => is_admin());
+        Gate::define('send_alerts', fn (User|Admin $user) => is_admin());
 
         Gate::define('view-own-orders', function (User $user) {
             return true;

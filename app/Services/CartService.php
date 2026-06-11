@@ -292,6 +292,38 @@ class CartService
         }
     }
 
+
+    public function mergeSessionCart(array $sessionCart = []): void
+    {
+        $userId = current_user()?->id;
+
+        // Only merge if logged in AND is a customer
+        if (empty($sessionCart) || !$userId || !is_customer()) {
+            return;
+        }
+
+        $userKey = $this->userPrefix . $userId;
+
+        foreach ($sessionCart as $productId => $item) {
+            // Handle different session cart formats (e.g. [id => ['quantity' => 2]] or [id => 2])
+            $qty = is_array($item) ? ($item['quantity'] ?? 1) : (int) $item;
+            
+            try {
+                $this->add($userKey, (int) $productId, $qty);
+            } catch (ProductOutOfStockException) {
+                // Silently skip out-of-stock items during merge
+            }
+        }
+
+        // Clear generic session cart if it exists
+        session()->forget('cart');
+
+        Log::channel('cart')->info('Legacy session cart merged to Redis', [
+            'user_id' => $userId,
+            'item_count' => count($sessionCart),
+        ]);
+    }
+
     /**
      * Set an item's quantity explicitly; removes item when $quantity <= 0.
      *

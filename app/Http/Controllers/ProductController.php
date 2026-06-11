@@ -24,7 +24,7 @@ class ProductController extends Controller
 
     public function index(Request $request): View
     {
-        Gate::authorize('view-products', Product::class);
+        $this->authorize('viewAny', Product::class);
         $results = $this->service->getProducts($request);
         return view('products.indexOld', [
             'products'          => $results['products'],

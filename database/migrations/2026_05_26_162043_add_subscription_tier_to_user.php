@@ -13,7 +13,7 @@ return new class extends Migration
     {
         if (!Schema::hasColumn('users', 'subscription_tier')) {
             Schema::table('users', function (Blueprint $table) {
-                $table->string('subscription_tier')->default('free');
+                $table->string('subscription_tier')->default('free')->index();
             });
         }
     }

@@ -39,7 +39,7 @@ class RegisteredUserController extends Controller
             'password' => [
                 'required',
                 'confirmed',
-                Password::min(12)
+                Password::min(8)
                     ->mixedCase()
                     ->numbers()
                     ->symbols()
@@ -53,16 +53,30 @@ class RegisteredUserController extends Controller
             'password' => Hash::make($request->password),
         ]);
 
+        // Assign default customer role so Spatie role/permission checks work.
+        $user->assignRole('customer');
+
         // Seed the history table with the first password hash so future
         // resets immediately have a baseline to check against.
         PasswordHistory::create([
             'user_id'  => $user->id,
-            'password' => $user->password, // already hashed by User::create()
+            'password' => $user->password,
         ]);
 
         event(new Registered($user));
 
         Auth::login($user);
+
+        $sessionCart = session()->get('cart', []);
+        app(\App\Services\CartService::class)->mergeSessionCart($sessionCart);
+
+        Log::channel('security')->info('New user registered', [
+            'user_id' => $user->id,
+            'email' => $user->email,
+            'ip' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'timestamp' => now()->toIso8601String(),
+        ]);
 
         return redirect(route('dashboard', absolute: false));
     }

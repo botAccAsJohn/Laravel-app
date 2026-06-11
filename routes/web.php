@@ -67,22 +67,20 @@ Route::middleware('auth')->group(function () {
 //  CUSTOMER ROUTES (role:customer)
 // ═══════════════════════════════════════════════════════════════════════════
 
-Route::middleware(['auth:web', 'role:customer'])->group(function () {
+Route::middleware(['auth:web'])->group(function () {
 
     // ── Verified Customer Routes ────────────────────────────────────────
     Route::middleware('verified')->group(function () {
 
-        // Order Routes (permission: place_order) ─────────────────────────
-        Route::middleware(['permission:place_order'])->group(function () {
-            Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
-            Route::get('/orders/create', [OrderController::class, 'create'])->name('orders.create');
-            Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
-            Route::post('/orders', [OrderController::class, 'store'])->middleware(['throttle:checkout'])->name('orders.store');
-            Route::post('/orders/coupon/validate', [OrderController::class, 'validateCoupon'])->name('coupon.validate');
-            Route::post('/orders/coupon/remove', [OrderController::class, 'removeCoupon'])->name('coupon.remove');
-            Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
-            Route::get('/invoices/{order}/download', [OrderController::class, 'invoice'])->name('invoices.download');
-        });
+        // Order Routes ─────────────────────────────────────────────────────
+        Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+        Route::get('/orders/create', [OrderController::class, 'create'])->name('orders.create');
+        Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+        Route::post('/orders', [OrderController::class, 'store'])->middleware(['throttle:checkout'])->name('orders.store');
+        Route::post('/orders/coupon/validate', [OrderController::class, 'validateCoupon'])->name('coupon.validate');
+        Route::post('/orders/coupon/remove', [OrderController::class, 'removeCoupon'])->name('coupon.remove');
+        Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
+        Route::get('/invoices/{order}/download', [OrderController::class, 'invoice'])->name('invoices.download');
 
         // Review Routes ──────────────────────────────────────────────────
         Route::post('/products/{product}/reviews', [ReviewController::class, 'store'])->name('reviews.store');

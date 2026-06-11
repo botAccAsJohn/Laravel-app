@@ -2,38 +2,14 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Spatie\Permission\Models\Role as SpatieRole;
 
-class Role extends Model
+class Role extends SpatieRole
 {
-    use HasFactory;
-
-    protected $fillable = ['name', 'display_name', 'description'];
-
-    /**
-     * The permissions this role grants.
-     */
-    public function permissions(): BelongsToMany
-    {
-        return $this->belongsToMany(Permission::class, 'permission_role');
-    }
-
-    /**
-     * The users who hold this role.
-     */
-    public function users(): BelongsToMany
-    {
-        return $this->belongsToMany(User::class, 'role_user')
-                    ->withPivot(['assigned_by', 'assigned_at']);
-    }
-
-    /**
-     * Check if this role has a specific permission.
-     */
-    public function hasPermission(string $permission): bool
-    {
-        return $this->permissions->pluck('name')->contains($permission);
-    }
+    protected $fillable = [
+        'name',
+        'guard_name',
+        'display_name',
+        'description',
+    ];
 }

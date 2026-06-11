@@ -23,7 +23,6 @@ class UserSeeder extends Seeder
                     'name' => 'User One',
                     'email' => 'user@example.com',
                     'password' => $password,
-                    'role' => 'user',
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]
@@ -45,7 +44,6 @@ class UserSeeder extends Seeder
                     ? $emailVerifiedAt->format('Y-m-d H:i:s') 
                     : $emailVerifiedAt;
 
-                $data['role'] = 'user';
                 $data['created_at'] = now();
                 $data['updated_at'] = now();
                 

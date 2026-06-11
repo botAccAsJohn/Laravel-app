@@ -14,7 +14,6 @@ return new class extends Migration
         Schema::create('users', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('role')->default('user'); // 'admin' or 'user'
             $table->string('preferred_locale')->default('en');
             $table->string('webhook_url')->nullable();
             $table->string('email')->unique();

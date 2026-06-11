@@ -14,7 +14,7 @@ class DatabaseSeeder extends Seeder
             CategorySeeder::class,
             ProductSeeder::class,
             OrderSeeder::class,
-            RolesPermissionsSeeder::class,  // Exercise 50.4 — RBAC seed data
+            RolesAndPermissionsSeeder::class,
         ]);
     }
 }

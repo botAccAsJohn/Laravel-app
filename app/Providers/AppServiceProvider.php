@@ -307,6 +307,15 @@ class AppServiceProvider extends ServiceProvider //implements DeferrableProvider
             );
         });
 
+        // Switch the default guard to whichever guard is active on this request.
+        // Must run AFTER the redis-eloquent provider is registered above.
+        // Wrapped in rescue() so CLI/artisan commands (which have no session) are safe.
+        rescue(function () {
+            if ($activeGuard = current_guard()) {
+                Auth::shouldUse($activeGuard);
+            }
+        });
+
         \Illuminate\Notifications\DatabaseNotification::saved(function ($notification) {
             \Illuminate\Support\Facades\Cache::forget("user:{$notification->notifiable_id}:notifications:latest");
             \Illuminate\Support\Facades\Cache::forget('unread_count_' . $notification->notifiable_id);

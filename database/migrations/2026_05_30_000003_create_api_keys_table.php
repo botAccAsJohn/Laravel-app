@@ -6,24 +6,6 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Exercise 53.3 — API Key table.
-     *
-     * Stores SHA-256 hashes of API keys, NEVER the plain-text key.
-     *
-     * Security design:
-     * ─────────────────
-     * • The plain-text key is generated once (random_bytes → base64_encode),
-     *   returned to the user EXACTLY ONCE, then discarded.
-     * • Only hash('sha256', $plainKey) is stored here.
-     * • Verification: hash_equals(hash('sha256', $incoming), $stored_hash).
-     * • SHA-256 is appropriate here (NOT bcrypt) because:
-     *     - API keys are 32+ random bytes (not human-memorable — no dictionary
-     *       attacks possible).
-     *     - Verification happens on every API request (high-frequency).
-     *     - bcrypt at cost 12 takes ~200 ms per check; SHA-256 takes < 1 µs.
-     *     - The randomness of the key eliminates the need for salting.
-     */
     public function up(): void
     {
         Schema::create('api_keys', function (Blueprint $table) {
@@ -35,8 +17,6 @@ return new class extends Migration
             $table->timestamp('last_used_at')->nullable();
             $table->timestamp('expires_at')->nullable();
             $table->timestamps();
-
-            $table->index('key_hash'); // fast O(1) lookup on every request
         });
     }
 

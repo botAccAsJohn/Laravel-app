@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Permission;
 use App\Models\User;
 use App\Models\OrderAnalytics;
 use Illuminate\Http\Request;
@@ -230,4 +231,20 @@ Route::middleware(['throttle:api', 'api.rate.headers'])->group(function () {
 
     // Protected routes now handled above with tier-based rate limiting
 
+    // ── Debug: test user permissions ─────────────────────────────────────────
+    Route::get('/testing-permission', function () {
+        $user = request()->user();
+        dd($user);
+        // $user = request()->user();
+        if (! $user) {
+            return response()->json(['error' => 'Not authenticated'], 401);
+        }
+        return response()->json([
+            'user'        => $user->email,
+            'roles'       => $user->getRoleNames(),
+            'permissions' => $user->getAllPermissions()->pluck('name'),
+        ]);
+    })->middleware('web');
+    
 });
+

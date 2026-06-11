@@ -9,10 +9,11 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Contracts\Translation\HasLocalePreference;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Laravel\Sanctum\HasApiTokens;
+use Spatie\Permission\Traits\HasRoles;
 
 class Admin extends Authenticatable implements HasLocalePreference
 {
-    use HasFactory, HasApiTokens, Notifiable, SoftDeletes;
+    use HasFactory, HasApiTokens, HasRoles, Notifiable, SoftDeletes;
 
     protected $guard = 'admin';
 

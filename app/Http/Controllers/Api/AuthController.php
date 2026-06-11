@@ -24,6 +24,9 @@ class AuthController extends Controller
             'password' => bcrypt($data['password']),
         ]);
 
+        // Assign default customer role so Spatie role/permission checks work.
+        $user->assignRole('customer');
+
         $token = $user->createToken(
             $request->device_name ?? 'api'
         )->plainTextToken;

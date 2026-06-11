@@ -58,6 +58,9 @@ class ManualAuthController extends Controller
             'password' => Hash::make($validated['password']),
         ]);
 
+        // Assign default customer role so Spatie role/permission checks work.
+        $user->assignRole('customer');
+
         // Fire the framework's Registered event so email verification
         // listeners can respond if needed.
         event(new Registered($user));

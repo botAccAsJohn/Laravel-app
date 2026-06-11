@@ -125,7 +125,7 @@ class OrderService
             ->whereIn('id', $onSaleOrderIds)             // ← subquery, not array
             ->whereNull('deleted_at');
 
-        return User::select(['id', 'name', 'email', 'role', 'created_at'])
+        return User::select(['id', 'name', 'email', 'created_at'])
             // ── addSelect() + subquery: inject last_order_amount as a computed column ─
             ->addSelect(['last_order_amount' => $lastOrderSubquery])
 
@@ -155,7 +155,9 @@ class OrderService
 
             // ── when(): scope to role — applies only if ?role= is present ────────
             ->when($request->filled('role'), fn (Builder $q) =>
-                $q->where('role', $request->input('role'))
+                $q->whereHas('roles', fn (Builder $r) =>
+                    $r->where('name', $request->input('role'))
+                )
             )
 
             // ── when(): whereIn with subquery — scope to on-sale buyers ──────────

@@ -15,9 +15,9 @@ class OrderSeeder extends Seeder
     {
         DB::transaction(function () {
             // Get all regular users to assign orders to
-            $users = User::where('role', 'user')->get();
+            $users = User::all();
             if ($users->isEmpty()) {
-                $users = User::factory()->count(10)->create(['role' => 'user']);
+                $users = User::factory()->count(10)->create();
             }
 
             // Fetch existing products to avoid creating new ones recursively

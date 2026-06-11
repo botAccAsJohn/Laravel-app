@@ -65,16 +65,12 @@ return [
     */
 
     'providers' => [
-        // Customer provider — respects AUTH_MODEL for flexibility in testing.
         'users' => [
-            'driver' => 'redis-eloquent',
+            'driver' => 'eloquent',//redis-eloquent
             'model'  => env('AUTH_MODEL', App\Models\User::class),
         ],
-
-        // Admin provider — intentionally hardcoded; it must NEVER resolve to
-        // the User model even if AUTH_MODEL is overridden in .env.
         'admins' => [
-            'driver' => 'redis-eloquent',
+            'driver' => 'eloquent',//redis-eloquent
             'model'  => App\Models\Admin::class,
         ],
     ],
@@ -102,18 +98,12 @@ return [
         'users' => [
             'provider' => 'users',
             'table'    => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
-            // Exercise 52.1: Reduced from default 60 → 15 minutes.
-            // Trade-off: shorter windows limit exposure if a reset link is
-            // intercepted (e.g. via email forwarding or open Wi-Fi sniffing),
-            // but they frustrate users on slow email delivery. 15 min balances
-            // security with a reasonable delivery window.
             'expire'   => 15,
-            // Users must wait 60 s before requesting another token.
             'throttle' => 60,
         ],
         'admins' => [
             'provider' => 'admins',
-            'table' => env('AUTH_ADMIN_PASSWORD_RESET_TOKEN_TABLE', 'admin_password_reset_tokens'),
+            'table' => 'admin_password_reset_tokens',
             'expire' => 15,
             'throttle' => 60,
         ],
@@ -132,9 +122,6 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
-    // ── Exercise 50.1: Gate::before — super-admin email list ────────────────
-    // Comma-separated admin emails that bypass ALL gate checks.
-    // Set in .env: SUPER_ADMIN_EMAILS=admin@example.com,root@example.com
     'super_admin_emails' => env('SUPER_ADMIN_EMAILS', ''),
 
 ];
