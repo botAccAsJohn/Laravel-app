@@ -19,41 +19,53 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // Idempotent (Module 42.3): guard every table so this migration can
+        // reconcile a partially-applied schema — e.g. when `roles`/`permissions`
+        // already exist but the pivot tables were never created.
+
         // ── roles ─────────────────────────────────────────────────────────────
-        Schema::create('roles', function (Blueprint $table) {
-            $table->id();
-            $table->string('name')->unique();          // e.g. 'manager'
-            $table->string('display_name');            // e.g. 'Store Manager'
-            $table->text('description')->nullable();
-            $table->timestamps();
-        });
+        if (! Schema::hasTable('roles')) {
+            Schema::create('roles', function (Blueprint $table) {
+                $table->id();
+                $table->string('name')->unique();          // e.g. 'manager'
+                $table->string('display_name');            // e.g. 'Store Manager'
+                $table->text('description')->nullable();
+                $table->timestamps();
+            });
+        }
 
         // ── permissions ───────────────────────────────────────────────────────
-        Schema::create('permissions', function (Blueprint $table) {
-            $table->id();
-            $table->string('name')->unique();          // e.g. 'manage_products'
-            $table->string('display_name');            // e.g. 'Manage Products'
-            $table->string('group')->default('general'); // for UI grouping
-            $table->text('description')->nullable();
-            $table->timestamps();
-        });
+        if (! Schema::hasTable('permissions')) {
+            Schema::create('permissions', function (Blueprint $table) {
+                $table->id();
+                $table->string('name')->unique();          // e.g. 'manage_products'
+                $table->string('display_name');            // e.g. 'Manage Products'
+                $table->string('group')->default('general'); // for UI grouping
+                $table->text('description')->nullable();
+                $table->timestamps();
+            });
+        }
 
         // ── role_user (user ↔ role pivot) ─────────────────────────────────────
-        Schema::create('role_user', function (Blueprint $table) {
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('role_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('assigned_by')->nullable()
-                  ->constrained('admins')->nullOnDelete();
-            $table->timestamp('assigned_at')->useCurrent();
-            $table->primary(['user_id', 'role_id']);
-        });
+        if (! Schema::hasTable('role_user')) {
+            Schema::create('role_user', function (Blueprint $table) {
+                $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+                $table->foreignId('role_id')->constrained()->cascadeOnDelete();
+                $table->foreignId('assigned_by')->nullable()
+                      ->constrained('admins')->nullOnDelete();
+                $table->timestamp('assigned_at')->useCurrent();
+                $table->primary(['user_id', 'role_id']);
+            });
+        }
 
         // ── permission_role (permission ↔ role pivot) ─────────────────────────
-        Schema::create('permission_role', function (Blueprint $table) {
-            $table->foreignId('permission_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('role_id')->constrained()->cascadeOnDelete();
-            $table->primary(['permission_id', 'role_id']);
-        });
+        if (! Schema::hasTable('permission_role')) {
+            Schema::create('permission_role', function (Blueprint $table) {
+                $table->foreignId('permission_id')->constrained()->cascadeOnDelete();
+                $table->foreignId('role_id')->constrained()->cascadeOnDelete();
+                $table->primary(['permission_id', 'role_id']);
+            });
+        }
     }
 
     public function down(): void
