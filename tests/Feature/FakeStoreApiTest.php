@@ -9,12 +9,9 @@ use Tests\TestCase;
 class FakeStoreApiTest extends TestCase
 {
     use RefreshDatabase;
+
     public function test_can_display_products_from_fake_api()
     {
-        // 0. Authenticate a user to prevent view layout errors
-        $user = \App\Models\User::factory()->create();
-        $this->actingAs($user);
-
         // 1. Fake the HTTP response
         Http::fake([
             'fakestoreapi.com/products' => Http::response([
@@ -33,7 +30,7 @@ class FakeStoreApiTest extends TestCase
         // 2. Make the request to the route
         $response = $this->get('/api/calling/getProducts');
 
-        // 3. Assert the page loads successfully and shows our fake data
+        // 3. Assert the page loads successfully
         $response->assertStatus(200);
         $response->assertSee('Awesome Fake Laptop');
 
@@ -55,8 +52,36 @@ class FakeStoreApiTest extends TestCase
         // 2. Make the request
         $response = $this->get('/api/calling/getProducts');
 
-        // 3. Assert it returns a 500 status and our friendly error message
+        // 3. API routes get JSON from ExternalApiException::render()
         $response->assertStatus(500);
-        $response->assertSee('The external service is currently unavailable. Please try again later.');
+        $response->assertJson([
+            'success' => false,
+            'message' => 'The external service returned an error. Please try again later.',
+        ]);
+    }
+
+    public function test_displays_friendly_error_on_connection_failure()
+    {
+        // 1. Fake a connection failure (unreachable server)
+        Http::fake([
+            'fakestoreapi.com/*' => function () {
+                throw new \Illuminate\Http\Client\ConnectionException(
+                    'cURL error 7: Failed to connect to fakestoreapi.com port 443: Connection refused',
+                    0
+                );
+            }
+        ]);
+
+        // 2. Make the request
+        $response = $this->get('/api/calling/getProducts');
+
+        // 3. Assert friendly JSON error message - no raw exception exposed
+        $response->assertStatus(500);
+        $response->assertJson([
+            'success' => false,
+            'message' => 'Could not connect to the external service. Please try again later.',
+        ]);
+        $response->assertDontSee('Connection refused');
+        $response->assertDontSee('cURL error');
     }
 }

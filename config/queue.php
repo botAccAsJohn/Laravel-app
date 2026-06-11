@@ -17,6 +17,24 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Named Queues
+    |--------------------------------------------------------------------------
+    |
+    | Jobs can be dispatched to specific queues for independent worker
+    | processes. Start workers with the --queue flag to prioritise.
+    |
+    |   default       — general-purpose (checkout chains, imports)
+    |   emails        — transactional mail
+    |   notifications — push notifications, Slack alerts
+    |   pdfs          — heavy PDF/export generation
+    |   analytics     — low-priority reports and aggregates
+    |
+    | Example worker command:
+    |   php artisan queue:work --queue=emails,notifications,default,pdfs,analytics
+    */
+
+    /*
+    |--------------------------------------------------------------------------
     | Queue Connections
     |--------------------------------------------------------------------------
     |

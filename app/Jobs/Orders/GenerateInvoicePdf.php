@@ -17,7 +17,8 @@ class GenerateInvoicePdf implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries = 3;
-    public int $timeout = 60;
+    public int $timeout = 120;
+    public array $backoff = [10, 30, 60];
 
     public function __construct(public readonly Order $order)
     {

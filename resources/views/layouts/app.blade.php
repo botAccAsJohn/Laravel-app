@@ -27,7 +27,7 @@
 
 <body class="font-sans antialiased">
     <div class="min-h-screen bg-gray-100">
-        @if($isImpersonating)
+        @if($isImpersonating ?? false)
             {{-- Admin is impersonating — show customer nav so the admin sees  --}}
             {{-- exactly what the user sees. Banner is inside navigation.blade. --}}
             @include('layouts.navigation')

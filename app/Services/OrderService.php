@@ -318,10 +318,10 @@ class OrderService
                 //  • unless($order->is_digital) skips stock reservation for virtual products.
                 // ─────────────────────────────────────────────────────────────────
                 $chain = [
-                    new ChargePayment($order),
-                    new ReserveStock($order),
-                    new GenerateInvoicePdf($order),
-                    new SendOrderConfirmation($order),
+                    (new ChargePayment($order))->onQueue('default'),
+                    (new ReserveStock($order))->onQueue('default'),
+                    (new GenerateInvoicePdf($order))->onQueue('pdfs'),
+                    (new SendOrderConfirmation($order))->onQueue('emails'),
                 ];
 
                 // unless(): remove ReserveStock from the chain for digital orders
@@ -331,7 +331,6 @@ class OrderService
                 }
 
                 Bus::chain($chain)
-                    ->onQueue('default')
                     ->catch(function (Throwable $e) use ($order) {
                         // Runs if any step in the chain fails after all retries
                         Log::channel('orders')->critical(

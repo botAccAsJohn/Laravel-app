@@ -18,6 +18,8 @@ class ExternalApiException extends Exception
             ], 500);
         }
 
+        session()->flash('error', $this->getMessage());
+
         return response()->view('errors.external-api', [
             'message' => $this->getMessage(),
         ], 500);

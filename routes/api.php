@@ -49,43 +49,75 @@ Route::middleware(['throttle:api', 'api.rate.headers'])->group(function () {
     });
 
     Route::get('/calling/getProducts', [\App\Http\Controllers\FakeStoreController::class, 'index']);
+
     Route::get('/calling/post', function () {
-        $response = Http::post('https://fakestoreapi.com/products', [
-            "title" => "string",
-            "price" => 100,
-            "description" => "string",
-            "category" => "string",
-            "image" => "http://example.com"
-        ]);
-        if ($response->successful()) {
+        try {
+            $response = Http::timeout(15)
+                ->post('https://fakestoreapi.com/products', [
+                    "title" => "string",
+                    "price" => 100,
+                    "description" => "string",
+                    "category" => "string",
+                    "image" => "http://example.com"
+                ])
+                ->throw();
+
             Log::info('POST Success', [
                 'status' => $response->status(),
                 'body' => $response->json()
             ]);
-        } else {
-            Log::error('POST Failed', [
-                'status' => $response->status(),
-                'body' => $response->body()
-            ]);
+
+            return response()->json($response->json());
+        } catch (\Illuminate\Http\Client\RequestException $e) {
+            Log::error('FakeStore POST returned an error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'The external service returned an error. Please try again later.',
+            ], 500);
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            Log::error('FakeStore POST unreachable: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Could not connect to the external service. Please try again later.',
+            ], 500);
         }
-        return response()->json($response->json());
     });
 
     Route::get('/pool', function () {
-        $responses = Http::pool(function ($http) {
-            return [
-                $http->get('https://fakestoreapi.com/products'),
-                $http->get('https://fakestoreapi.com/users'),
-            ];
-        });
+        try {
+            $responses = Http::timeout(15)->pool(function ($http) {
+                return [
+                    $http->timeout(15)->get('https://fakestoreapi.com/products'),
+                    $http->timeout(15)->get('https://fakestoreapi.com/users'),
+                ];
+            });
 
-        $products = $responses[0]->json();
-        $users = $responses[1]->json();
+            $products = $responses[0]->json();
+            $users = $responses[1]->json();
 
-        return response()->json([
-            'products' => $products,
-            'users' => $users,
-        ]);
+            return response()->json([
+                'products' => $products,
+                'users' => $users,
+            ]);
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            Log::error('FakeStore pool request unreachable: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Could not connect to the external service. Please try again later.',
+            ], 500);
+        } catch (\Illuminate\Http\Client\RequestException $e) {
+            Log::error('FakeStore pool request error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'The external service returned an error. Please try again later.',
+            ], 500);
+        } catch (\Exception $e) {
+            Log::error('FakeStore pool request failed: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'The external service returned an unexpected response. Please try again later.',
+            ], 500);
+        }
     });
 
     // generate the signed url
@@ -247,4 +279,3 @@ Route::middleware(['throttle:api', 'api.rate.headers'])->group(function () {
     })->middleware('web');
     
 });
-

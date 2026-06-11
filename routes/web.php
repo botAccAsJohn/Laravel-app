@@ -28,7 +28,7 @@ Route::get('/dashboard', DashboardController::class)->name('dashboard');
 
 // ── Contact (public) ─────────────────────────────────────────────────────
 Route::get('/contact', [ContactController::class, 'index'])->name('contact.index');
-Route::post('/contact', [ContactController::class, 'submit'])->name('contact.submit');
+Route::post('/contact', [ContactController::class, 'store'])->name('contact.submit');
 
 // ── Support Tickets (public) ─────────────────────────────────────────────
 Route::prefix('support')->name('support.')->group(function () {

@@ -76,7 +76,16 @@ class LoginRequest extends FormRequest
 
         // ── Success: clear both counters ──────────────────────────────────
         RateLimiter::clear($this->throttleKey());
-        $service->recordSuccess($email, $this->ip(), Auth::id());
+                // Transparent re-hash on password-algorithm change (Exercise 53.2)
+        if (\Illuminate\Support\Facades\Hash::needsRehash(Auth::user()->password)) {
+            Auth::user()->update([
+                'password' => \Illuminate\Support\Facades\Hash::make($this->password),
+            ]);
+            Log::channel('security')->info('[Password] Transparent re-hash performed', [
+                'user_id' => Auth::id(),
+                'new_algo' => config('hashing.driver'),
+            ]);
+        }
     }
 
     // ── IP-based rate limiter (Layer 1 — unchanged Breeze logic) ─────────

@@ -150,7 +150,17 @@ class ManualAuthController extends Controller
         $this->mergeGuestData($guestCartId, $guestViewedId, Auth::id());
 
         // Clear both counters on success.
-        $service->recordSuccess($email, $request->ip(), Auth::id());
+                // Transparent re-hash on password-algorithm change (Exercise 53.2)
+        $plainPassword = $credentials['password'];
+        if (\Illuminate\Support\Facades\Hash::needsRehash(Auth::user()->password)) {
+            Auth::user()->update([
+                'password' => \Illuminate\Support\Facades\Hash::make($plainPassword),
+            ]);
+            Log::channel('security')->info('[Password] Transparent re-hash performed (manual auth)', [
+                'user_id' => Auth::id(),
+                'new_algo' => config('hashing.driver'),
+            ]);
+        }
 
         return redirect()->intended(route('products.index'))
             ->with('success', 'Welcome back!');

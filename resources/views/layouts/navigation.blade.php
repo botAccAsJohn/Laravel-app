@@ -1,7 +1,7 @@
 {{-- ── Impersonation Banner ───────────────────────────────────────────── --}}
 {{-- Shown only when an admin has switched into a customer session.        --}}
 {{-- $isImpersonating is shared by CheckImpersonation middleware.          --}}
-@if($isImpersonating)
+@if($isImpersonating ?? false)
 <div class="bg-amber-400 text-amber-950 text-sm font-semibold px-4 py-2 flex items-center justify-between gap-4 shadow">
     <span class="flex items-center gap-2">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">

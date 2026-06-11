@@ -25,6 +25,20 @@
             <x-input-error :messages="$errors->get('password')" class="mt-2" />
         </div>
 
+        @php
+            $email = old('email', '');
+            $needsCaptcha = $email ? app(\App\Services\LoginThrottleService::class)->requiresCaptcha($email) : false;
+        @endphp
+
+        @if($needsCaptcha && config('services.hcaptcha.sitekey'))
+        <div class="mt-4">
+            <x-input-label value="CAPTCHA" />
+            <div class="h-captcha mt-1" data-sitekey="{{ config('services.hcaptcha.sitekey') }}"></div>
+            <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
+            <x-input-error :messages="$errors->get('captcha')" class="mt-2" />
+        </div>
+        @endif
+
         <!-- Remember Me -->
         <div class="block mt-4">
             <label for="remember_me" class="inline-flex items-center">

@@ -46,7 +46,7 @@ test('support ticket submission is programmatically rate limited', function () {
 
     // 3 attempts allowed
     for ($i = 0; $i < 3; $i++) {
-        $response = $this->actingAs($user)->post(route('support-tickets.store'), [
+        $response = $this->actingAs($user)->post(route('support.tickets.store'), [
             'subject' => 'Issue ' . $i,
             'description' => 'I have an issue.',
             'customer_name' => $user->name,
@@ -58,7 +58,7 @@ test('support ticket submission is programmatically rate limited', function () {
     }
 
     // 4th attempt should be blocked
-    $response = $this->actingAs($user)->post(route('support-tickets.store'), [
+    $response = $this->actingAs($user)->post(route('support.tickets.store'), [
         'subject' => 'Blocked issue',
         'description' => 'I have an issue.',
         'customer_name' => $user->name,

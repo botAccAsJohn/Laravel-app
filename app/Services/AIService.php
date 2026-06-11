@@ -2,7 +2,10 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\{Http, Cache};
+use Illuminate\Support\Facades\{Http, Cache, Log};
+use Illuminate\Http\Client\RequestException;
+use Illuminate\Http\Client\ConnectionException;
+use App\Exceptions\ExternalApiException;
 
 class AIService
 {
@@ -19,32 +22,43 @@ class AIService
      */
     public function ask(string $prompt, ?int $userId = null): string
     {
-        $response = Http::post("{$this->apiUrl}?key={$this->apiKey}", [
-            'contents' => [
-                [
-                    'parts' => [
-                        ['text' => $prompt],
+        try {
+            $response = Http::timeout(30)
+                ->post("{$this->apiUrl}?key={$this->apiKey}", [
+                    'contents' => [
+                        [
+                            'parts' => [
+                                ['text' => $prompt],
+                            ],
+                        ],
                     ],
-                ],
-            ],
-        ]);
+                ])
+                ->throw()
+                ->throwIf(
+                    fn ($response) => $response->json('error') !== null,
+                    new ExternalApiException(
+                        $response->json('error.message', 'Unknown API error') .
+                        ' [Code: ' . ($response->json('error.code', $response->status())) . ']'
+                    )
+                );
 
-        if ($response->failed() || $response->json('error')) {
-            $errorMsg = $response->json('error.message', 'Unknown API error');
-            $errorCode = $response->json('error.code', $response->status());
-            return "API Error [{$errorCode}]: {$errorMsg}";
+            $text = $response->json('candidates.0.content.parts.0.text', 'No response from AI.');
+
+            // Optionally store in cache keyed by user
+            if ($userId) {
+                $history = Cache::get("ai_history_{$userId}", []);
+                $history[] = ['role' => 'user', 'prompt' => $prompt, 'response' => $text, 'at' => now()->toDateTimeString()];
+                Cache::put("ai_history_{$userId}", array_slice($history, -50), now()->addDays(7));
+            }
+
+            return $text;
+        } catch (RequestException $e) {
+            Log::error('AI API returned an error: ' . $e->getMessage());
+            throw new ExternalApiException('The AI service returned an error. Please try again later.');
+        } catch (ConnectionException $e) {
+            Log::error('AI API unreachable: ' . $e->getMessage());
+            throw new ExternalApiException('Could not connect to the AI service. Please try again later.');
         }
-
-        $text = $response->json('candidates.0.content.parts.0.text', 'No response from AI.');
-
-        // Optionally store in cache keyed by user
-        if ($userId) {
-            $history = Cache::get("ai_history_{$userId}", []);
-            $history[] = ['role' => 'user', 'prompt' => $prompt, 'response' => $text, 'at' => now()->toDateTimeString()];
-            Cache::put("ai_history_{$userId}", array_slice($history, -50), now()->addDays(7));
-        }
-
-        return $text;
     }
 
     /**
@@ -67,11 +81,28 @@ class AIService
             'parts' => [['text' => $prompt]],
         ];
 
-        $response = Http::post("{$this->apiUrl}?key={$this->apiKey}", [
-            'contents' => $contents,
-        ]);
+        try {
+            $response = Http::timeout(30)
+                ->post("{$this->apiUrl}?key={$this->apiKey}", [
+                    'contents' => $contents,
+                ])
+                ->throw()
+                ->throwIf(
+                    fn ($response) => $response->json('error') !== null,
+                    new ExternalApiException(
+                        $response->json('error.message', 'Unknown API error') .
+                        ' [Code: ' . ($response->json('error.code', $response->status())) . ']'
+                    )
+                );
 
-        return $response->json('candidates.0.content.parts.0.text', 'No response from AI.');
+            return $response->json('candidates.0.content.parts.0.text', 'No response from AI.');
+        } catch (RequestException $e) {
+            Log::error('AI API returned an error: ' . $e->getMessage());
+            throw new ExternalApiException('The AI service returned an error. Please try again later.');
+        } catch (ConnectionException $e) {
+            Log::error('AI API unreachable: ' . $e->getMessage());
+            throw new ExternalApiException('Could not connect to the AI service. Please try again later.');
+        }
     }
 
     /**
