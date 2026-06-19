@@ -1,0 +1,38 @@
+<?php
+
+namespace App\Http\Middleware;
+
+use Auth;
+use Closure;
+use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Illuminate\Support\Facades\Context;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
+
+class ReqContextMiddleware
+{
+
+    public function handle(Request $request, Closure $next): Response
+    {
+        if ($activeGuard = current_guard()) {
+            Auth::shouldUse($activeGuard);
+        }
+
+        // Generate request ID
+        $requestId = (string) Str::ulid();
+        $isAdmin = Auth::guard('admin')->check();
+        $user = $isAdmin ? Auth::guard('admin')->user() : $request->user();
+
+        Context::add('request_id', $requestId);
+        Context::add('user_id', $user?->id);
+        Context::add('user_type', $isAdmin ? 'admin' : ($user?->role ?? 'user'));
+        Context::add('ip_address', $request->ip());
+
+        $userType = Context::get('user_type', 'customer');
+
+        Log::channel($userType)->info("{$userType} performed an action");
+
+        return $next($request);
+    }
+}

@@ -1,0 +1,27 @@
+{
+    "Add to Cart": "أضف إلى السلة",
+    "Checkout": "الدفع",
+    "Out of Stock": "غير متوفر",
+    "Quantity": "الكمية",
+    "Remove": "إزالة",
+    "Welcome to our store!": "أهلاً بكم في متجرنا!",
+    "Buy Now": "اشتر الآن",
+    "In Stock": "متوفر في المخزون",
+    "Unavailable": "غير متاح",
+    "Price": "السعر",
+    "Shopping Cart": "سلة التسوق",
+    "Proceed to Buy": "المتابعة للشراء",
+    "Welcome": "أهلاً بك",
+    "Welcome, :name": "أهلاً بك، :name",
+    "Verify Email Address": "تأكيد عنوان البريد الإلكتروني",
+    "Please click the button below to verify your email address.": "يرجى النقر فوق الزر أدناه لتأكيد عنوان بريدك الإلكتروني.",
+    "If you did not create an account, no further action is required.": "إذا لم تقم بإنشاء حساب، فلا داعي لاتخاذ أي إجراء آخر.",
+
+    "reset_subject":    "إعادة تعيين كلمة المرور",
+    "reset_greeting":   "مرحباً :name،",
+    "reset_intro":      "تلقيت هذا البريد الإلكتروني لأننا تلقينا طلبًا لإعادة تعيين كلمة مرور حسابك.",
+    "reset_expiry":     "ستنتهي صلاحية رابط إعادة تعيين كلمة المرور هذا خلال 15 دقيقة.",
+    "reset_action":     "إعادة تعيين كلمة المرور",
+    "reset_footer":     "إذا لم تطلب إعادة تعيين كلمة المرور، فلا داعي لاتخاذ أي إجراء آخر.",
+    "reset_no_click":   "إذا كنت تواجه صعوبة في النقر على زر 'إعادة تعيين كلمة المرور'، انسخ الرابط أدناه والصقه في متصفح الويب الخاص بك."
+}

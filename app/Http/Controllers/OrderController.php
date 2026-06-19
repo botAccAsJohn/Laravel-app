@@ -1,0 +1,286 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Order;
+use App\Services\OrderService;
+use Illuminate\Http\{RedirectResponse, Request};
+use App\Http\Requests\{StoreOrderRequest, UpdateOrderRequest};
+use Illuminate\Support\Facades\{Auth, Storage};
+use Illuminate\View\View;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+
+class OrderController extends Controller
+{
+    use AuthorizesRequests;
+
+    public function __construct(
+        private OrderService $service,
+    ) {
+    }
+
+    public function index(Request $request): View
+    {
+        $this->authorize('viewAny', Order::class);
+
+        $cursor = $request->query('cursor', '');
+        $isAdminGuard = Auth::guard('admin')->check() && !is_impersonating();
+        $user = $isAdminGuard ? Auth::guard('admin')->user() : Auth::user();
+        
+        $canSeeAllOrders = $isAdminGuard || ($user && $user->can('manage_orders'));
+        
+        $data = $this->service->getOrdersForUser($user, $cursor, $canSeeAllOrders);
+
+        return view('orders.index', [
+            'orders' => $data['orders'],
+            'total_orders' => $data['total_orders'],
+        ]);
+    }
+
+    /**
+     * Display customer order insights and statistics.
+     * Uses Collection methods: count(), sum(), avg(), reject(), flatMap(), groupBy(), sortByDesc(), take()
+     */
+    public function analytics(): View
+    {
+        // Any authenticated user (web or admin) may view their own analytics.
+        // The admin guard bypasses OrderPolicy::before() so admins see all.
+        $this->authorize('viewAny', Order::class);
+
+        $user = Auth::user();
+
+        // Admins (admin guard) and authorized managers see all orders; customers see only their own.
+        $isAdminGuard = Auth::guard('admin')->check() && !is_impersonating();
+        $canViewAllAnalytics = $isAdminGuard || ($user && $user->can('view_analytics'));
+
+        $query = Order::with('items.product');
+        if (!$canViewAllAnalytics) {
+            $query->where('user_id', $user->id);
+        }
+        $orders = $query->get();
+
+        // 1. General Metrics (Collection: reject, sum, avg)
+        $processedOrders = $orders->reject(fn($o) => in_array($o->status, ['cancelled', 'pending']));
+
+        $totalOrders = $orders->count();
+        $totalSpent = (float) $processedOrders->sum('final_amount');
+        $averageOrderValue = (float) $processedOrders->avg('final_amount');
+
+        // 2. Favorite Products (Collection: flatMap, groupBy, map, sortByDesc, take)
+        $favoriteProducts = $orders->flatMap(fn($order) => $order->items)
+            ->groupBy('product_id')
+            ->map(function ($items) {
+                $item = $items->first();
+                return [
+                    'name' => $item->product->name ?? 'Unknown',
+                    'count' => (int) $items->sum('quantity'),
+                    'image' => $item->product->image_path ?? null,
+                ];
+            })
+            ->sortByDesc('count')
+            ->take(3);
+
+        // 3. Status Breakdown (Collection: groupBy, map)
+        $statusBreakdown = $orders->groupBy('status')
+            ->map(fn($group) => $group->count());
+
+        return view('orders.analytics', compact(
+            'totalOrders',
+            'totalSpent',
+            'averageOrderValue',
+            'favoriteProducts',
+            'statusBreakdown'
+        ));
+    }
+
+    public function create(Request $request): View|RedirectResponse
+    {
+        // Enforce 'place_order' permission via OrderPolicy::create().
+        // Admins are passed through by OrderPolicy::before().
+        $this->authorize('create', Order::class);
+
+        $summary = $this->service->cartSummary(Auth::id(), $request->query('coupon_code'));
+
+        if (empty($summary['cart'])) {
+            return redirect()->route('cart.index')->with('warning', 'Your cart is empty. Add products before checkout.');
+        }
+
+        if ($request->has('coupon_code') && !$summary['coupon']) {
+            session()->flash('error', 'Invalid or expired coupon code.');
+        } elseif ($request->has('coupon_code') && $summary['coupon']) {
+            session()->flash('success', 'Coupon code applied successfully!');
+        }
+
+        return view('orders.create', array_merge($summary, [
+            'applied_coupon' => $summary['coupon']?->code ?? null
+        ]));
+    }
+
+    public function store(StoreOrderRequest $request): RedirectResponse
+    {
+        // StoreOrderRequest::authorize() already checks 'place_order'.
+        // This explicit authorize() call is defense-in-depth — it protects
+        // against any future changes that might bypass the FormRequest.
+        $this->authorize('create', Order::class);
+
+        $validated = $request->validated();
+
+        // Compute summary once — reuse for the empty-cart check AND for order creation
+        $summary = $this->service->cartSummary(Auth::id(), $validated['coupon_code'] ?? null);
+        if (empty($summary['cart'])) {
+            return redirect()->route('cart.index')->with('warning', 'Your cart is empty. Add products before checkout.');
+        }
+
+        try {
+            $order = $this->service->createFromCart(Auth::user(), $validated, $summary);
+
+            return redirect()->route('orders.show', $order)->with('success', 'Order created successfully.');
+        } catch (\App\Exceptions\ProductOutOfStockException $e) {
+            return redirect()->route('cart.index')->with('error', $e->getMessage());
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Order creation failed: ' . $e->getMessage());
+            return redirect()->route('cart.index')->with('error', 'Something went wrong while placing your order. Please try again.');
+        }
+    }
+
+    public function show(Order $order): View
+    {
+        $this->authorize('view', $order);
+        $order->loadMissing(['user', 'items.product']);
+        $signedUrl = $this->service->generateSignedUrl($order);
+
+        return view('orders.show', compact('order', 'signedUrl'));
+    }
+
+    public function edit(Order $order): View
+    {
+        $this->authorize('update', $order);
+
+        $order->loadMissing(['items.product']);
+
+        return view('orders.edit', compact('order'));
+    }
+
+    public function update(UpdateOrderRequest $request, Order $order): RedirectResponse
+    {
+        $validated = $request->validated();
+        $this->service->update($order, $validated);
+
+        return redirect()->route('orders.index')->with('success', 'Order status updated.');
+    }
+
+    public function cancel(Order $order): RedirectResponse
+    {
+        $this->authorize('cancel', $order);
+
+        if (!in_array($order->status, ['pending', 'confirmed'])) {
+            return redirect()->back()->with('error', 'Order cannot be cancelled in its current state.');
+        }
+
+        $this->service->cancel($order);
+
+        return redirect()->back()->with('success', 'Order has been cancelled.');
+    }
+
+    public function destroy(Order $order): RedirectResponse
+    {
+        $this->authorize('delete', $order);
+
+        $this->service->delete($order);
+
+        return redirect()->route('orders.index')->with('success', 'Order deleted.');
+    }
+
+    public function invoice(Request $request, Order $order)
+    {
+        if (!$request->hasValidSignature()) {
+            abort(403, 'Invalid or expired invoice link.');
+        }
+        
+        $this->authorize('view', $order);
+        
+        $path = 'invoices/invoice-' . $order->order_number . '.pdf';
+
+        if (!Storage::disk('local')->exists($path)) {
+            return redirect()->back()->with('error', 'Invoice file not found.');
+        }
+        return Storage::disk('local')->download($path, 'invoice-' . ($order->order_number ?? $order->id) . '.pdf');
+    }
+
+    /**
+     * Validate and apply coupon code via AJAX.
+     * Returns the updated order summary with coupon details.
+     */
+    public function validateCoupon(Request $request)
+    {
+        $validated = $request->validate([
+            'coupon_code' => ['required', 'string', 'max:50'],
+        ]);
+
+        try {
+            $summary = $this->service->cartSummary(Auth::id(), $validated['coupon_code']);
+
+            if (!$summary['coupon']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid or expired coupon code.',
+                ], 422);
+            }
+
+            if ($summary['coupon']) {
+                $cartService = app(\App\Services\CartService::class);
+                $cartService->applyCoupon($cartService->resolveCartKey(), $summary['coupon']->code);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Coupon applied successfully!',
+                'coupon' => [
+                    'code' => $summary['coupon']->code,
+                    'type' => $summary['coupon']->type,
+                    'value' => $summary['coupon']->value,
+                ],
+                'summary' => [
+                    'total_amount' => format_price($summary['total_amount']),
+                    'discount_amount' => format_price($summary['discount_amount'] - $summary['coupon_discount']),
+                    'coupon_discount' => format_price($summary['coupon_discount']),
+                    'final_amount' => format_price($summary['final_amount']),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred while validating the coupon.',
+            ], 500);
+        }
+    }
+
+    /**
+     * Remove the applied coupon and return updated summary.
+     */
+    public function removeCoupon(Request $request)
+    {
+        try {
+            $cartService = app(\App\Services\CartService::class);
+            $cartService->applyCoupon($cartService->resolveCartKey(), null);
+            $summary = $this->service->cartSummary(Auth::id());
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Coupon removed successfully.',
+                'summary' => [
+                    'total_amount' => format_price($summary['total_amount']),
+                    'discount_amount' => format_price($summary['discount_amount']),
+                    'coupon_discount' => format_price(0),
+                    'final_amount' => format_price($summary['final_amount']),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred while removing the coupon.',
+            ], 500);
+        }
+    }
+
+}
